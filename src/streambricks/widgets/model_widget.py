@@ -683,7 +683,7 @@ def render_model_instance_field(
         container = st.container()
         container.divider()
     else:
-        container = st
+        container = st  # type: ignore
 
     # Render each field of the nested model
     updated_value = {}
@@ -982,7 +982,7 @@ def render_model_field(model_class, field_name, value=None):
     if hasattr(field, "native_field") and hasattr(
         field.native_field, "json_schema_extra"
     ):
-        field_info.update(field.native_field.json_schema_extra or {})  # pyright: ignore
+        field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
     # Get description for the label
     label = field_name.replace("_", " ").title()
@@ -990,7 +990,7 @@ def render_model_field(model_class, field_name, value=None):
         description = field.metadata["description"]
         field_info["description"] = description
     elif hasattr(field, "native_field") and hasattr(field.native_field, "description"):
-        description = field.native_field.description  # pyright: ignore
+        description = field.native_field.description  # type: ignore
         field_info["description"] = description
 
     # Get renderer and render the field
