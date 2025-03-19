@@ -599,7 +599,7 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
     raise ValueError(error_msg)
 
 
-def render_model_readonly(model_class, instance):
+def render_model_readonly[T](model_class: type[T], instance: T | None = None):
     """Render a model in read-only mode using a clean label-based layout."""
     if instance is None:
         st.info("No data available")
