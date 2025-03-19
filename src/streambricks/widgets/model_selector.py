@@ -32,14 +32,9 @@ def model_selector(
     from tokonomics.model_discovery import get_all_models_sync
 
     models = get_all_models_sync(providers=providers)
-
-    # Get unique providers from models
     available_providers = sorted({model.provider for model in models})
-
-    # Get current model info to set initial selections
     current_model = None
     current_provider = None
-
     if initial_model:
         current_model = next(
             (m for m in models if m.pydantic_ai_id == initial_model),
@@ -48,7 +43,6 @@ def model_selector(
         if current_model:
             current_provider = current_model.provider
 
-    # Provider selection
     if len(available_providers) > 1:
         default_provider_idx = (
             available_providers.index(current_provider)
@@ -65,8 +59,6 @@ def model_selector(
 
     provider_models = [m for m in models if m.provider == selected_provider]
     model_names = [m.name for m in provider_models]
-
-    # Determine initial model index
     default_model_idx = 0
     if current_model and current_model.provider == selected_provider:
         try:
@@ -74,17 +66,8 @@ def model_selector(
         except ValueError:
             default_model_idx = 0
 
-    selected_name = st.selectbox(
-        "Model",
-        options=model_names,
-        index=default_model_idx,
-    )
-
-    selected_model = next(
-        (m for m in provider_models if m.name == selected_name),
-        None,
-    )
-
+    selected_name = st.selectbox("Model", options=model_names, index=default_model_idx)
+    selected_model = next((m for m in provider_models if m.name == selected_name), None)
     if selected_model:
         with st.expander("Model Details", expanded=expanded):
             st.markdown(selected_model.format())
