@@ -516,13 +516,10 @@ def render_model_instance_field(
                 # Get field value and handle 'MISSING' with type-appropriate defaults
                 field_value = get_with_default(value, field_name, field)
 
-                # Get field description if available
                 field_help = None
-                if hasattr(field, "metadata") and "description" in field.metadata:
+                if "description" in field.metadata:
                     field_help = field.metadata["description"]
-                elif hasattr(field, "native_field") and hasattr(
-                    field.native_field, "description"
-                ):
+                elif hasattr(field.native_field, "description"):
                     field_help = field.native_field.description  # type: ignore
 
                 # Extract field info
@@ -535,9 +532,7 @@ def render_model_instance_field(
                     nested_field_info["help"] = field_help
 
                 # Extract additional properties
-                if hasattr(field, "native_field") and hasattr(
-                    field.native_field, "json_schema_extra"
-                ):
+                if hasattr(field.native_field, "json_schema_extra"):
                     nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
                 # Render the field
@@ -632,11 +627,9 @@ def render_model_readonly(model_class, instance):
             field_type = field.type
             label = field_name.replace("_", " ").title()
             description = None
-            if hasattr(field, "metadata") and "description" in field.metadata:
+            if "description" in field.metadata:
                 description = field.metadata["description"]
-            elif hasattr(field, "native_field") and hasattr(
-                field.native_field, "description"
-            ):
+            elif hasattr(field.native_field, "description"):
                 description = field.native_field.description  # type: ignore
 
             render_field_readonly(
@@ -736,9 +729,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
 
     # Extract field metadata
     field_info = {"name": field.name, "type": field.type, "default": field.default}
-    if hasattr(field, "native_field") and hasattr(
-        field.native_field, "json_schema_extra"
-    ):
+    if hasattr(field.native_field, "json_schema_extra"):
         field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
     # Format label from field name
@@ -746,16 +737,14 @@ def render_model_field(model_class, field_name, value=None, container=st):
 
     # Get description for help tooltip
     help_text = None
-    if hasattr(field, "metadata") and "description" in field.metadata:
+    if "description" in field.metadata:
         help_text = field.metadata["description"]
-    elif hasattr(field, "native_field") and hasattr(field.native_field, "description"):
+    elif hasattr(field.native_field, "description"):
         help_text = field.native_field.description  # type: ignore
 
-    # Add help text to field info if available
     if help_text:
         field_info["help"] = help_text
 
-    # Get renderer and render the field
     renderer = get_field_renderer(field_info)
     return renderer(
         key=field_name,
@@ -799,7 +788,7 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
     for field in fieldz.fields(model_class):
         # Check if field has a category defined
         category = "General"
-        if hasattr(field, "metadata") and "category" in field.metadata:
+        if "category" in field.metadata:
             category = field.metadata["category"]
 
         if category not in field_groups:
