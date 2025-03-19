@@ -12,74 +12,22 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin, o
 import fieldz
 import streamlit as st
 
+from streambricks.widgets.type_helpers import (
+    add_new_item,
+    create_default_instance,
+    get_with_default,
+    is_dataclass_like,
+    is_literal_type,
+    is_sequence_type,
+    is_union_type,
+)
+
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
 T = TypeVar("T")
 WidgetFunc = Callable[..., T]
-
-
-def _get_with_default(obj: Any, field_name: str, field_info: Any = None) -> Any:  # noqa: PLR0911
-    """Get field value with appropriate default if it's missing."""
-    # Get the raw value
-    value = getattr(obj, field_name, None)
-
-    # If value isn't MISSING, return it as is
-    if value != "MISSING":
-        return value
-
-    # If we don't have field info, get it
-    if field_info is None:
-        for field in fieldz.fields(obj.__class__):
-            if field.name == field_name:
-                field_info = field
-                break
-
-    # If we have field info, use it to determine appropriate default
-    if field_info is not None:
-        field_type = field_info.type
-
-        # Handle Union types
-        if is_union_type(field_type):
-            types = [t for t in get_args(field_type) if t is not type(None)]
-            if int in types:
-                return 0
-            if float in types:
-                return 0.0
-            if str in types:
-                return ""
-            if bool in types:
-                return False
-            if types and isinstance(types[0], type):
-                if issubclass(types[0], int):
-                    return 0
-                if issubclass(types[0], float):
-                    return 0.0
-                if issubclass(types[0], str):
-                    return ""
-                if issubclass(types[0], bool):
-                    return False
-
-        # Handle basic types
-        if isinstance(field_type, type):
-            if issubclass(field_type, int):
-                return 0
-            if issubclass(field_type, float):
-                return 0.0
-            if issubclass(field_type, str):
-                return ""
-            if issubclass(field_type, bool):
-                return False
-            if (
-                issubclass(field_type, list)
-                or issubclass(field_type, set)
-                or issubclass(field_type, tuple)
-            ):
-                return []
-
-    # Default fallback for unknown types
-    return None
 
 
 def render_str_field(
@@ -250,19 +198,15 @@ def render_enum_field(
 ) -> Enum:
     """Render an enum field using appropriate Streamlit widget."""
     enum_class = field_info.get("enum_class") or field_info.get("type")
-
-    # Handle the case where enum_class might not be valid
     if enum_class is None or not issubclass(enum_class, Enum):
         error_msg = f"Invalid enum class for field {key}"
         raise TypeError(error_msg)
 
-    # Get enum options - every Enum class is iterable over its members
     options = list(enum_class.__members__.values())
 
     if not options:
         return None  # type: ignore
 
-    # Find index of current value in options
     index = 0
     if value is not None:
         with contextlib.suppress(ValueError):
@@ -314,37 +258,6 @@ def render_literal_field(
         disabled=disabled,
         key=key,
     )
-
-
-def is_literal_type(annotation: Any) -> bool:
-    """Check if a type annotation is a Literal type."""
-    # Check directly against the origin or special attribute
-    return (
-        get_origin(annotation) is Literal
-        or getattr(annotation, "__origin__", None) is Literal
-    )
-
-
-def is_union_type(annotation: Any) -> bool:
-    """Check if a type annotation is a Union type."""
-    origin = get_origin(annotation)
-    # Check if it's Union or Optional (which is Union[T, None])
-    return origin is not None and (
-        origin.__name__ == "Union" if hasattr(origin, "__name__") else False
-    )
-
-
-def is_sequence_type(annotation: Any) -> bool:
-    """Check if a type annotation is a sequence type."""
-    origin = get_origin(annotation)
-    if origin is None:
-        return False
-
-    try:
-        return issubclass(origin, list | set | tuple)
-    except TypeError:
-        # Handle case where origin is not a class
-        return False
 
 
 def render_union_field(  # noqa: PLR0911
@@ -440,64 +353,10 @@ def render_union_field(  # noqa: PLR0911
         return result
 
 
-def create_default_instance(model_class: type) -> Any:
+def try_create_default_instance(model_class: type) -> Any:
     """Create a default instance of a model with default values for required fields."""
-    # Create an empty dict to collect required values
-    default_values = {}
-
-    # Get all fields
-    for field in fieldz.fields(model_class):
-        field_name = field.name
-
-        # Check if the field already has a default value
-        has_default = False
-        if hasattr(field, "default") and field.default != "MISSING":
-            # Use the field's default value
-            default_values[field_name] = field.default
-            has_default = True
-        elif hasattr(field, "default_factory") and field.default_factory != "MISSING":
-            try:
-                # Use the field's default factory
-                default_values[field_name] = field.default_factory()  # pyright: ignore
-                has_default = True
-            except Exception:  # noqa: BLE001
-                # If default_factory fails, fall back to type-based defaults
-                pass
-
-        # If the field doesn't have a default, create one based on type
-        if not has_default:
-            field_type = field.type
-
-            # Handle union types
-            if is_union_type(field_type):
-                types = [t for t in get_args(field_type) if t is not type(None)]
-                if int in types:
-                    default_values[field_name] = 0
-                elif float in types:
-                    default_values[field_name] = 0.0
-                elif str in types:
-                    default_values[field_name] = ""
-                elif bool in types:
-                    default_values[field_name] = False
-                continue
-
-            # Set type-appropriate default values based on Python type
-            if isinstance(field_type, type):
-                if issubclass(field_type, str):
-                    default_values[field_name] = ""
-                elif issubclass(field_type, int):
-                    default_values[field_name] = 0
-                elif issubclass(field_type, float):
-                    default_values[field_name] = 0.0
-                elif issubclass(field_type, bool):
-                    default_values[field_name] = False
-                elif is_dataclass_like(field_type):
-                    # For nested models, recursively create default instances
-                    default_values[field_name] = create_default_instance(field_type)
-
-    # Create and return the instance with the default values
     try:
-        return model_class(**default_values)
+        return create_default_instance(model_class)
     except Exception as e:  # noqa: BLE001
         error_msg = f"Error creating default instance: {e}"
         st.error(error_msg)
@@ -554,48 +413,12 @@ def render_sequence_field(
         # Add new item button
         if st.button("Add Item", key=add_item_key, disabled=disabled):
             add_new_item(st.session_state[items_key], item_type)
-
-        # Render items
         render_sequence_items(
             st.session_state[items_key], item_type, key, items_key, disabled, field_info
         )
 
     # Return the current items
     return st.session_state[items_key]
-
-
-def add_new_item(items_list: list, item_type: Any) -> None:
-    """Add a new item to a list based on its type."""
-    if is_dataclass_like(item_type):
-        # For dataclass-like types, create a default instance
-        new_item = create_default_instance(item_type)
-        if new_item is not None:
-            items_list.append(new_item)
-    # For basic types, add appropriate default values
-    elif item_type is str:
-        items_list.append("")
-    elif item_type is int:
-        items_list.append(0)
-    elif item_type is float:
-        items_list.append(0.0)
-    elif item_type is bool:
-        items_list.append(False)
-    elif is_union_type(item_type):
-        # For union types, use the first non-None type
-        types = [t for t in get_args(item_type) if t is not type(None)]
-        if int in types:
-            items_list.append(0)
-        elif float in types:
-            items_list.append(0.0)
-        elif str in types:
-            items_list.append("")
-        elif bool in types:
-            items_list.append(False)
-        else:
-            items_list.append(None)
-    else:
-        # For unknown types, add None
-        items_list.append(None)
 
 
 def render_sequence_items(
@@ -665,7 +488,7 @@ def render_model_instance_field(
 
     # Initialize value if none
     if value is None:
-        value = create_default_instance(model_class)
+        value = try_create_default_instance(model_class)
         if value is None:  # If creation failed
             try:
                 value = model_class()
@@ -693,7 +516,7 @@ def render_model_instance_field(
             field_name = field.name
 
             # Get field value and handle 'MISSING' with type-appropriate defaults
-            field_value = _get_with_default(value, field_name, field)
+            field_value = get_with_default(value, field_name, field)
 
             # Add label for the field
             container.caption(f"{field_name.replace('_', ' ').title()}")
@@ -746,26 +569,6 @@ def render_model_instance_field(
         return value
 
 
-def is_dataclass_like(annotation: Any) -> bool:
-    """Check if a type is a dataclass-like object (Pydantic model, attrs, etc.)."""
-    # Check if it's a class
-    if not isinstance(annotation, type):
-        return False
-
-    # Check if it's a Pydantic model (v2)
-    if hasattr(annotation, "model_fields"):
-        return True
-
-    try:
-        # Check if fieldz can extract fields from it
-        fields = fieldz.fields(annotation)
-        # If we get fields, it's a dataclass-like object
-        return len(fields) > 0
-    except Exception:  # noqa: BLE001
-        # If fieldz can't handle it, it's not a dataclass-like object
-        return False
-
-
 # Mapping of Python types to render functions
 PRIMITIVE_RENDERERS = {
     str: render_str_field,
@@ -784,40 +587,32 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
     """Get the appropriate renderer for a field based on its type and constraints."""
     annotation = field_info.get("type") or field_info.get("annotation")
 
-    # Check for Literal first (using our helper function)
     if is_literal_type(annotation):
         return render_literal_field
 
-    # Check for Union types
     if is_union_type(annotation):
         return render_union_field
 
-    # Check for sequence types
     if is_sequence_type(annotation):
         return render_sequence_field
 
-    # Get basic type (handling Optional/Union)
     origin = get_origin(annotation)
     if origin is not None:
         args = get_args(annotation)
         if len(args) > 0:
             annotation = args[0]
 
-    # Check if it's a dataclass-like object (including Pydantic models)
     if is_dataclass_like(annotation):
         return render_model_instance_field
 
-    # Handle Enum types - check explicitly before using issubclass
     if isinstance(annotation, type):
         try:
             if issubclass(annotation, Enum):
                 field_info["enum_class"] = annotation
                 return render_enum_field
         except TypeError:
-            # Skip if we get a TypeError (for special typing constructs)
             pass
 
-    # Get renderer for basic types - safely check with try/except
     for base_type, renderer in PRIMITIVE_RENDERERS.items():
         if isinstance(annotation, type):
             try:
@@ -827,7 +622,6 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
                 # Skip if we get a TypeError (for special typing constructs)
                 continue
 
-    # Special case for Literal (fallback)
     if getattr(annotation, "__origin__", None) is Literal:
         return render_literal_field
 
@@ -847,12 +641,8 @@ def render_model_readonly(model_class, instance):
         for field in fieldz.fields(model_class):
             field_name = field.name
             field_value = getattr(instance, field_name, None)
-
-            # Get field metadata
             field_type = field.type
             label = field_name.replace("_", " ").title()
-
-            # Get description if available
             description = None
             if hasattr(field, "metadata") and "description" in field.metadata:
                 description = field.metadata["description"]
@@ -861,7 +651,6 @@ def render_model_readonly(model_class, instance):
             ):
                 description = field.native_field.description  # type: ignore
 
-            # Display field
             render_field_readonly(
                 label=label,
                 value=field_value,
@@ -875,7 +664,6 @@ def render_field_readonly(label, value, field_type, description=None, key=None):
     """Render a single field in read-only mode."""
     # Create a container with two columns: label and value
     cols = st.columns([0.3, 0.7])
-
     with cols[0]:
         st.markdown(f"**{label}:**")
         if description:
@@ -927,13 +715,9 @@ def display_sequence_readonly(value, field_type, key=None):
     if not value:  # Empty sequence
         st.text("No items")
         return
-
-    # Get item type
     item_type = Any
     with contextlib.suppress(IndexError, TypeError):
         item_type = get_args(field_type)[0]
-
-    # Display each item
     for i, item in enumerate(value):
         with st.expander(f"Item {i + 1}", expanded=False):
             display_value_readonly(item, item_type, key=f"{key}_{i}" if key else None)
@@ -941,21 +725,13 @@ def display_sequence_readonly(value, field_type, key=None):
 
 def display_model_readonly(value, key=None):
     """Display a nested model in read-only mode."""
-    # Get model class
     model_class = value.__class__
-
-    # Get all fields
     for field in fieldz.fields(model_class):
         field_name = field.name
         field_value = getattr(value, field_name, None)
-
-        # Handle 'MISSING' values
         if field_value == "MISSING":
-            field_value = _get_with_default(value, field_name, field)
-
-        # Create a sub-container for this field
+            field_value = get_with_default(value, field_name, field)
         sub_key = f"{key}_{field_name}" if key else field_name
-
         cols = st.columns([0.3, 0.7])
         with cols[0]:
             st.markdown(f"**{field_name.replace('_', ' ').title()}:**")
@@ -966,25 +742,15 @@ def display_model_readonly(value, key=None):
 def render_model_field(model_class, field_name, value=None):
     """Render a field from a model using fieldz to extract field information."""
     field = next((f for f in fieldz.fields(model_class) if f.name == field_name), None)
-
     if field is None:
         error_msg = f"Field {field_name} not found in {model_class.__name__}"
         raise ValueError(error_msg)
 
-    # Extract field information using fieldz
-    field_info = {
-        "name": field.name,
-        "type": field.type,
-        "default": field.default,
-    }
-
-    # Extract additional properties from field metadata
+    field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field, "native_field") and hasattr(
         field.native_field, "json_schema_extra"
     ):
         field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
-
-    # Get description for the label
     label = field_name.replace("_", " ").title()
     if hasattr(field, "metadata") and "description" in field.metadata:
         description = field.metadata["description"]
@@ -1026,30 +792,22 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
     Returns:
         An instance of the model with updated values
     """
-    # Determine if we have a class or an instance
     if isinstance(model_or_instance, type):
-        # We received a class
         model_class = model_or_instance
         instance = model_class()  # Create a default instance
     else:
-        # We received an instance
         instance = model_or_instance
         model_class = instance.__class__
     if readonly:
         render_model_readonly(model_class, instance)
         return instance  # No changes in read-only mode
 
-    # Interactive form rendering
     result = {}
 
     for field in fieldz.fields(model_class):
         field_name = field.name
-        # Use _get_with_default to handle 'MISSING' values
-        current_value = _get_with_default(instance, field_name, field)
-
+        current_value = get_with_default(instance, field_name, field)
         st.subheader(field_name.replace("_", " ").title())
-
-        # Display field description if available
         description = None
         if hasattr(field, "metadata") and "description" in field.metadata:
             description = field.metadata["description"]
@@ -1060,11 +818,8 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
 
         if description:
             st.caption(description)
-
-        # Render the field and store the result
         result[field_name] = render_model_field(model_class, field_name, current_value)
 
-    # Create a new instance with updated values
     return fieldz.replace(instance, **result)
 
 
