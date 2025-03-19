@@ -171,6 +171,14 @@ def create_default_instance(model_class: type) -> Any:
     return model_class(**default_values)
 
 
+def get_description(field: fieldz.Field) -> str | None:
+    if "description" in field.metadata:
+        return field.metadata["description"]
+    if hasattr(field.native_field, "description"):
+        return field.native_field.description  # type: ignore
+    return None
+
+
 def add_new_item(items_list: list, item_type: Any) -> None:
     """Add a new item to a list based on its type."""
     if is_dataclass_like(item_type):

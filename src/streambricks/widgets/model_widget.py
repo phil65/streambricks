@@ -15,6 +15,7 @@ import streamlit as st
 from streambricks.widgets.type_helpers import (
     add_new_item,
     create_default_instance,
+    get_description,
     get_with_default,
     is_dataclass_like,
     is_literal_type,
@@ -515,27 +516,14 @@ def render_model_instance_field(
 
                 # Get field value and handle 'MISSING' with type-appropriate defaults
                 field_value = get_with_default(value, field_name, field)
-
-                field_help = None
-                if "description" in field.metadata:
-                    field_help = field.metadata["description"]
-                elif hasattr(field.native_field, "description"):
-                    field_help = field.native_field.description  # type: ignore
-
-                # Extract field info
-                nested_field_info = {
-                    "name": field_name,
-                    "type": field.type,
-                }
-
+                field_help = get_description(field)
+                nested_field_info = {"name": field_name, "type": field.type}
                 if field_help:
                     nested_field_info["help"] = field_help
 
-                # Extract additional properties
                 if hasattr(field.native_field, "json_schema_extra"):
                     nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
-                # Render the field
                 renderer = get_field_renderer(nested_field_info)
                 updated_value[field_name] = renderer(
                     key=f"{key}_{field_name}",
@@ -545,7 +533,6 @@ def render_model_instance_field(
                     **nested_field_info,
                 )
 
-            # Create a new instance with the updated values
             return fieldz.replace(value, **updated_value)
         except Exception as e:  # noqa: BLE001
             st.error(f"Error rendering nested model fields: {e!s}")
@@ -626,17 +613,11 @@ def render_model_readonly(model_class, instance):
             field_value = getattr(instance, field_name, None)
             field_type = field.type
             label = field_name.replace("_", " ").title()
-            description = None
-            if "description" in field.metadata:
-                description = field.metadata["description"]
-            elif hasattr(field.native_field, "description"):
-                description = field.native_field.description  # type: ignore
-
             render_field_readonly(
                 label=label,
                 value=field_value,
                 field_type=field_type,
-                description=description,
+                description=get_description(field),
                 key=f"ro_{field_name}",
             )
 
@@ -732,16 +713,8 @@ def render_model_field(model_class, field_name, value=None, container=st):
     if hasattr(field.native_field, "json_schema_extra"):
         field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
-    # Format label from field name
     label = field_name.replace("_", " ").title()
-
-    # Get description for help tooltip
-    help_text = None
-    if "description" in field.metadata:
-        help_text = field.metadata["description"]
-    elif hasattr(field.native_field, "description"):
-        help_text = field.native_field.description  # type: ignore
-
+    help_text = get_description(field)
     if help_text:
         field_info["help"] = help_text
 
