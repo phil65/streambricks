@@ -36,6 +36,7 @@ def render_str_field(
     value: str | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> str:
     """Render a string field using appropriate Streamlit widget."""
@@ -48,6 +49,7 @@ def render_str_field(
             value=value or "",
             disabled=disabled,
             key=key,
+            help=help,
         )
 
     return st.text_input(
@@ -55,6 +57,7 @@ def render_str_field(
         value=value or "",
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -64,6 +67,7 @@ def render_int_field(
     value: int | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> int:
     """Render an integer field using Streamlit number_input."""
@@ -88,7 +92,8 @@ def render_int_field(
         step=step,
         disabled=disabled,
         key=key,
-        format="%d",  # Use integer format
+        format="%d",
+        help=help,
     )
 
     return int(result)
@@ -100,6 +105,7 @@ def render_float_field(
     value: float | Decimal | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> float | Decimal:
     """Render a float or Decimal field using Streamlit number_input."""
@@ -128,6 +134,7 @@ def render_float_field(
         step=step,
         disabled=disabled,
         key=key,
+        help=help,
     )
 
     # Convert back to Decimal if needed
@@ -143,6 +150,7 @@ def render_bool_field(
     value: bool | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> bool:
     """Render a boolean field using appropriate Streamlit widget."""
@@ -151,6 +159,7 @@ def render_bool_field(
         value=value if value is not None else False,
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -160,6 +169,7 @@ def render_date_field(
     value: date | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> date:
     """Render a date field using appropriate Streamlit widget."""
@@ -168,6 +178,7 @@ def render_date_field(
         value=value or date.today(),
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -177,6 +188,7 @@ def render_time_field(
     value: time | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> time:
     """Render a time field using appropriate Streamlit widget."""
@@ -185,6 +197,7 @@ def render_time_field(
         value=value or datetime.now().time(),
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -194,6 +207,7 @@ def render_enum_field(
     value: Enum | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> Enum:
     """Render an enum field using appropriate Streamlit widget."""
@@ -218,6 +232,7 @@ def render_enum_field(
         index=index,
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -227,6 +242,7 @@ def render_literal_field(
     value: Any = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> Any:
     """Render a Literal field using appropriate Streamlit widget."""
@@ -247,6 +263,7 @@ def render_literal_field(
             disabled=disabled,
             key=key,
             horizontal=True,
+            help=help,
         )
 
     # Use selectbox for other literals
@@ -257,6 +274,7 @@ def render_literal_field(
         index=index,
         disabled=disabled,
         key=key,
+        help=help,
     )
 
 
@@ -266,6 +284,7 @@ def render_union_field(  # noqa: PLR0911
     value: Any = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> Any:
     """Render a field that can accept multiple types."""
@@ -283,6 +302,7 @@ def render_union_field(  # noqa: PLR0911
         options=type_names,
         key=type_key,
         disabled=disabled,
+        help=help,
     )
 
     # Find selected type
@@ -306,11 +326,7 @@ def render_union_field(  # noqa: PLR0911
             elif selected_type is str:
                 typed_value = str(value)
             elif selected_type is bool:
-                # Handle conversion to bool (0/False, anything else/True)
-                if isinstance(value, int | float):
-                    typed_value = bool(value)
-                else:
-                    typed_value = bool(value)
+                typed_value = bool(value)
             elif isinstance(value, selected_type):
                 typed_value = value
         except (ValueError, TypeError):
@@ -321,8 +337,9 @@ def render_union_field(  # noqa: PLR0911
     result = renderer(
         key=field_key,
         value=typed_value,
-        label=label,
+        label=f"Value ({selected_type_name})",  # More descriptive label
         disabled=disabled,
+        help=help,
         **modified_field_info,
     )
 
@@ -369,6 +386,7 @@ def render_sequence_field(
     value: Sequence[Any] | None = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> list[Any]:
     """Render a field for sequence types (list, tuple, set)."""
@@ -388,33 +406,24 @@ def render_sequence_field(
     except (IndexError, TypeError):
         item_type = Any
 
-    # Check if we're already inside an expander
-    inside_expander = field_info.get("inside_expander", False)
-
     # Create container for sequence elements
-    if not inside_expander:
-        st.markdown(f"**{label or key}**")
-        with st.container():
-            # Add new item button
-            if st.button("Add Item", key=add_item_key, disabled=disabled):
-                add_new_item(st.session_state[items_key], item_type)
+    st.markdown(f"**{label or key}**")
+    if help:
+        st.caption(help)
 
-            # Render items
-            render_sequence_items(
-                st.session_state[items_key],
-                item_type,
-                key,
-                items_key,
-                disabled,
-                field_info,
-            )
-    else:
-        # Already inside an expander, use simple container
+    with st.container():
         # Add new item button
         if st.button("Add Item", key=add_item_key, disabled=disabled):
             add_new_item(st.session_state[items_key], item_type)
+
+        # Render items
         render_sequence_items(
-            st.session_state[items_key], item_type, key, items_key, disabled, field_info
+            st.session_state[items_key],
+            item_type,
+            key,
+            items_key,
+            disabled,
+            field_info,
         )
 
     # Return the current items
@@ -430,19 +439,13 @@ def render_sequence_items(
     field_info: dict,
 ) -> None:
     """Render items in a sequence with delete buttons."""
-    # Prepare item field info
     item_info = field_info.copy()
     item_info["type"] = item_type
     item_info["inside_expander"] = True  # Mark as inside a container
 
-    # Try to get renderer for item type
     try:
         renderer = get_field_renderer(item_info)
-
-        # Track which items to delete
         items_to_delete = []
-
-        # Render each item with a delete button
         for i, item in enumerate(items):
             st.divider()
             st.markdown(f"**Item {i + 1}**")
@@ -456,12 +459,10 @@ def render_sequence_items(
                 **item_info,
             )
 
-            # Delete button for this item
             delete_key = f"{key}_delete_{i}"
             if st.button("Delete Item", key=delete_key, disabled=disabled):
                 items_to_delete.append(i)
 
-        # Process deletions (in reverse order to avoid index shifting)
         if items_to_delete:
             for idx in sorted(items_to_delete, reverse=True):
                 if 0 <= idx < len(items):
@@ -478,6 +479,7 @@ def render_model_instance_field(
     value: Any = None,
     label: str | None = None,
     disabled: bool = False,
+    help: str | None = None,  # noqa: A002  # Added help parameter
     **field_info: Any,
 ) -> Any:
     """Render a nested model instance field."""
@@ -497,76 +499,62 @@ def render_model_instance_field(
                 st.error(error_msg)
                 return None
 
-    # Check if we're already inside an expander
-    inside_expander = field_info.get("inside_expander", False)
+    # Show a header for the nested model with help text if available
+    st.markdown(f"**{label or key}**")
+    if help:
+        st.caption(help)
 
-    # If needed, wrap in a container (not an expander)
-    if not inside_expander:
-        st.markdown(f"**{label or key}**")
-        container = st.container()
-        container.divider()
-    else:
-        container = st  # type: ignore
+    # Use an expander for the nested model fields
+    with st.expander("Edit", expanded=True):
+        # Render each field of the nested model
+        updated_value = {}
 
-    # Render each field of the nested model
-    updated_value = {}
+        try:
+            for field in fieldz.fields(model_class):
+                field_name = field.name
 
-    try:
-        for field in fieldz.fields(model_class):
-            field_name = field.name
+                # Get field value and handle 'MISSING' with type-appropriate defaults
+                field_value = get_with_default(value, field_name, field)
 
-            # Get field value and handle 'MISSING' with type-appropriate defaults
-            field_value = get_with_default(value, field_name, field)
+                # Get field description if available
+                field_help = None
+                if hasattr(field, "metadata") and "description" in field.metadata:
+                    field_help = field.metadata["description"]
+                elif hasattr(field, "native_field") and hasattr(
+                    field.native_field, "description"
+                ):
+                    field_help = field.native_field.description  # pyright: ignore
 
-            # Add label for the field
-            container.caption(f"{field_name.replace('_', ' ').title()}")
+                # Extract field info
+                nested_field_info = {
+                    "name": field_name,
+                    "type": field.type,
+                }
 
-            # Get field description if available
-            if hasattr(field, "metadata") and "description" in field.metadata:
-                description = field.metadata["description"]
-                container.markdown(
-                    f"<small>{description}</small>", unsafe_allow_html=True
+                if field_help:
+                    nested_field_info["help"] = field_help
+
+                # Extract additional properties
+                if hasattr(field, "native_field") and hasattr(
+                    field.native_field, "json_schema_extra"
+                ):
+                    nested_field_info.update(field.native_field.json_schema_extra or {})  # pyright: ignore
+
+                # Render the field
+                renderer = get_field_renderer(nested_field_info)
+                updated_value[field_name] = renderer(
+                    key=f"{key}_{field_name}",
+                    value=field_value,
+                    label=field_name.replace("_", " ").title(),
+                    disabled=disabled,
+                    **nested_field_info,
                 )
-            elif hasattr(field, "native_field") and hasattr(
-                field.native_field, "description"
-            ):
-                description = field.native_field.description  # type: ignore
-                container.markdown(
-                    f"<small>{description}</small>", unsafe_allow_html=True
-                )
 
-            # Extract field info
-            nested_field_info = {
-                "name": field_name,
-                "type": field.type,
-                "inside_expander": True,  # Mark as inside a container
-            }
-
-            # Extract additional properties
-            if hasattr(field, "native_field") and hasattr(
-                field.native_field, "json_schema_extra"
-            ):
-                nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
-
-            # Render the field
-            renderer = get_field_renderer(nested_field_info)
-            updated_value[field_name] = renderer(
-                key=f"{key}_{field_name}",
-                value=field_value,
-                label=field_name.replace("_", " ").title(),
-                disabled=disabled,
-                **nested_field_info,
-            )
-
-        # Add a divider if we're in a container
-        if not inside_expander:
-            container.divider()
-
-        # Create a new instance with the updated values
-        return fieldz.replace(value, **updated_value)
-    except Exception as e:  # noqa: BLE001
-        st.error(f"Error rendering nested model fields: {e!s}")
-        return value
+            # Create a new instance with the updated values
+            return fieldz.replace(value, **updated_value)
+        except Exception as e:  # noqa: BLE001
+            st.error(f"Error rendering nested model fields: {e!s}")
+            return value
 
 
 # Mapping of Python types to render functions
@@ -649,7 +637,7 @@ def render_model_readonly(model_class, instance):
             elif hasattr(field, "native_field") and hasattr(
                 field.native_field, "description"
             ):
-                description = field.native_field.description  # type: ignore
+                description = field.native_field.description  # pyright: ignore
 
             render_field_readonly(
                 label=label,
@@ -739,25 +727,33 @@ def display_model_readonly(value, key=None):
             display_value_readonly(field_value, field.type, key=sub_key)
 
 
-def render_model_field(model_class, field_name, value=None):
-    """Render a field from a model using fieldz to extract field information."""
+def render_model_field(model_class, field_name, value=None, container=st):
+    """Render a field from a model using a compact layout."""
     field = next((f for f in fieldz.fields(model_class) if f.name == field_name), None)
     if field is None:
         error_msg = f"Field {field_name} not found in {model_class.__name__}"
         raise ValueError(error_msg)
 
+    # Extract field metadata
     field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field, "native_field") and hasattr(
         field.native_field, "json_schema_extra"
     ):
-        field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
+        field_info.update(field.native_field.json_schema_extra or {})  # pyright: ignore
+
+    # Format label from field name
     label = field_name.replace("_", " ").title()
+
+    # Get description for help tooltip
+    help_text = None
     if hasattr(field, "metadata") and "description" in field.metadata:
-        description = field.metadata["description"]
-        field_info["description"] = description
+        help_text = field.metadata["description"]
     elif hasattr(field, "native_field") and hasattr(field.native_field, "description"):
-        description = field.native_field.description  # type: ignore
-        field_info["description"] = description
+        help_text = field.native_field.description  # pyright: ignore
+
+    # Add help text to field info if available
+    if help_text:
+        field_info["help"] = help_text
 
     # Get renderer and render the field
     renderer = get_field_renderer(field_info)
@@ -783,42 +779,54 @@ def render_model_form(model_or_instance: TForm, *, readonly: bool = False) -> TF
 
 
 def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
-    """Render a complete form for a model class or instance.
-
-    Args:
-        model_or_instance: Either a model class or an instance of it
-        readonly: Whether to render in read-only mode
-
-    Returns:
-        An instance of the model with updated values
-    """
+    """Render a complete form for a model class or instance using compact layout."""
     if isinstance(model_or_instance, type):
         model_class = model_or_instance
         instance = model_class()  # Create a default instance
     else:
         instance = model_or_instance
         model_class = instance.__class__
+
     if readonly:
         render_model_readonly(model_class, instance)
         return instance  # No changes in read-only mode
 
     result = {}
 
-    for field in fieldz.fields(model_class):
-        field_name = field.name
-        current_value = get_with_default(instance, field_name, field)
-        st.subheader(field_name.replace("_", " ").title())
-        description = None
-        if hasattr(field, "metadata") and "description" in field.metadata:
-            description = field.metadata["description"]
-        elif hasattr(field, "native_field") and hasattr(
-            field.native_field, "description"
-        ):
-            description = field.native_field.description  # type: ignore
+    # Group fields by category if metadata exists, otherwise use "General"
+    field_groups: dict[str, Any] = {}
 
-        if description:
-            st.caption(description)
-        result[field_name] = render_model_field(model_class, field_name, current_value)
+    for field in fieldz.fields(model_class):
+        # Check if field has a category defined
+        category = "General"
+        if hasattr(field, "metadata") and "category" in field.metadata:
+            category = field.metadata["category"]
+
+        if category not in field_groups:
+            field_groups[category] = []
+
+        field_groups[category].append(field)
+
+    # If we have multiple categories, use tabs
+    if len(field_groups) > 1:
+        tabs = st.tabs(list(field_groups.keys()))
+
+        for i, (_group_name, fields) in enumerate(field_groups.items()):
+            with tabs[i]:
+                for field in fields:
+                    field_name = field.name
+                    current_value = get_with_default(instance, field_name, field)
+                    result[field_name] = render_model_field(
+                        model_class, field_name, current_value
+                    )
+    else:
+        # Single category, render fields directly
+        for field in fieldz.fields(model_class):
+            field_name = field.name
+            current_value = get_with_default(instance, field_name, field)
+            result[field_name] = render_model_field(
+                model_class, field_name, current_value
+            )
 
     return fieldz.replace(instance, **result)
 
