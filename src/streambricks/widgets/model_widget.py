@@ -523,7 +523,7 @@ def render_model_instance_field(
                 elif hasattr(field, "native_field") and hasattr(
                     field.native_field, "description"
                 ):
-                    field_help = field.native_field.description  # pyright: ignore
+                    field_help = field.native_field.description  # type: ignore
 
                 # Extract field info
                 nested_field_info = {
@@ -538,7 +538,7 @@ def render_model_instance_field(
                 if hasattr(field, "native_field") and hasattr(
                     field.native_field, "json_schema_extra"
                 ):
-                    nested_field_info.update(field.native_field.json_schema_extra or {})  # pyright: ignore
+                    nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
                 # Render the field
                 renderer = get_field_renderer(nested_field_info)
@@ -637,7 +637,7 @@ def render_model_readonly(model_class, instance):
             elif hasattr(field, "native_field") and hasattr(
                 field.native_field, "description"
             ):
-                description = field.native_field.description  # pyright: ignore
+                description = field.native_field.description  # type: ignore
 
             render_field_readonly(
                 label=label,
@@ -739,7 +739,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
     if hasattr(field, "native_field") and hasattr(
         field.native_field, "json_schema_extra"
     ):
-        field_info.update(field.native_field.json_schema_extra or {})  # pyright: ignore
+        field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
 
     # Format label from field name
     label = field_name.replace("_", " ").title()
@@ -749,7 +749,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
     if hasattr(field, "metadata") and "description" in field.metadata:
         help_text = field.metadata["description"]
     elif hasattr(field, "native_field") and hasattr(field.native_field, "description"):
-        help_text = field.native_field.description  # pyright: ignore
+        help_text = field.native_field.description  # type: ignore
 
     # Add help text to field info if available
     if help_text:
