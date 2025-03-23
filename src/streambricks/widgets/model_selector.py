@@ -15,14 +15,14 @@ if TYPE_CHECKING:
 
 def model_selector(
     *,
-    initial_model: str | None = None,
+    value: str | None = None,
     providers: Sequence[ProviderType] | None = None,
     expanded: bool = True,
 ) -> ModelInfo | None:
     """Render a model selector with provider and model dropdowns.
 
     Args:
-        initial_model: Initial model name to select
+        value: Initial model name to select
         providers: List of providers to show models from
         expanded: Whether to expand the model details by default
 
@@ -35,9 +35,9 @@ def model_selector(
     available_providers = sorted({model.provider for model in models})
     current_model = None
     current_provider = None
-    if initial_model:
+    if value:
         current_model = next(
-            (m for m in models if m.pydantic_ai_id == initial_model),
+            (m for m in models if m.pydantic_ai_id == value),
             None,
         )
         if current_model:
