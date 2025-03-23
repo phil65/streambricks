@@ -20,6 +20,7 @@ from streambricks.widgets.type_helpers import (
     is_dataclass_like,
     is_literal_type,
     is_sequence_type,
+    is_set_type,
     is_union_type,
 )
 
@@ -474,6 +475,216 @@ def render_sequence_items(
         st.error(f"Error rendering sequence items: {e!s}")
 
 
+def render_set_field(
+    *,
+    key: str,
+    value: set[Any] | None = None,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+    **field_info: Any,
+) -> set[Any]:
+    """Render a field for set types with a multi-select interface when possible."""
+    annotation = field_info.get("type") or field_info.get("annotation")
+
+    # Initialize empty set if value is None
+    if value is None:
+        value = set()
+
+    # Extract item type from set annotation
+    try:
+        item_type = get_args(annotation)[0]  # Get type of set items
+    except (IndexError, TypeError):
+        item_type = Any
+
+    # Check if item_type is an enum or literal - if so, we know all possible values
+    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(
+        item_type
+    ):
+        return render_set_with_known_domain(
+            key=key,
+            value=value,
+            item_type=item_type,
+            label=label,
+            disabled=disabled,
+            help=help,
+        )
+
+    # For open-ended sets, use a modified sequence renderer that ensures uniqueness
+    return render_open_set_field(
+        key=key,
+        value=value,
+        item_type=item_type,
+        label=label,
+        disabled=disabled,
+        help=help,
+        **field_info,
+    )
+
+
+def render_set_with_known_domain(
+    *,
+    key: str,
+    value: set[Any],
+    item_type: Any,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+) -> set[Any]:
+    """Render a set field using a multiselect when domain is known (enum or literal)."""
+    # Get all possible values
+    if isinstance(item_type, type) and issubclass(item_type, Enum):
+        all_options = list(item_type.__members__.values())
+        format_func = lambda x: x.name  # noqa: E731
+    else:  # Literal type
+        all_options = list(get_args(item_type))
+        format_func = str
+
+    # Use multi-select for known domain
+    selected = st.multiselect(
+        label=label or key,
+        options=all_options,
+        default=list(value),
+        format_func=format_func,
+        disabled=disabled,
+        key=key,
+        help=help,
+    )
+    return set(selected)
+
+
+def render_open_set_field(
+    *,
+    key: str,
+    value: set[Any],
+    item_type: Any,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+    **field_info: Any,
+) -> set[Any]:
+    """Render an open-ended set field with uniqueness enforcement."""
+    # Create unique state keys for this field
+    add_item_key = f"{key}_add_item"
+    items_key = f"{key}_items"
+
+    # Initialize session state for this field
+    if items_key not in st.session_state:
+        st.session_state[items_key] = list(value)
+
+    # Create container for set elements
+    st.markdown(f"**{label or key}**")
+    if help:
+        st.caption(help)
+
+    with st.container():
+        if st.button("Add Item", key=add_item_key, disabled=disabled):
+            temp_list: list[Any] = []
+            add_new_item(temp_list, item_type)
+
+            # If the temp_list has an item and it's not a duplicate, add it to our items
+            if temp_list and str(temp_list[0]) not in {
+                str(i) for i in st.session_state[items_key]
+            }:
+                st.session_state[items_key].append(temp_list[0])
+            elif temp_list:  # Item was created but was a duplicate
+                st.warning("Item already exists in the set.")
+
+        render_set_items(
+            st.session_state[items_key],
+            item_type,
+            key,
+            items_key,
+            disabled,
+            field_info,
+        )
+
+    # Return the current items as a set
+    return set(st.session_state[items_key])
+
+
+def render_set_items(
+    items: list,
+    item_type: Any,
+    key: str,
+    items_key: str,
+    disabled: bool,
+    field_info: dict,
+) -> None:
+    """Render items in a set with delete buttons and uniqueness enforcement."""
+    item_info = field_info.copy()
+    item_info["type"] = item_type
+    item_info["inside_expander"] = True  # Mark as inside a container
+
+    try:
+        renderer = get_field_renderer(item_info)
+        items_to_delete = []
+
+        for i, item in enumerate(items):
+            st.divider()
+            st.markdown(f"**Item {i + 1}**")
+
+            # Render the item
+            updated_item = renderer(
+                key=f"{key}_item_{i}",
+                value=item,
+                label=f"Item {i + 1}",
+                disabled=disabled,
+                **item_info,
+            )
+
+            # Check if this update would create a duplicate
+            duplicate = False
+            for j, other_item in enumerate(items):
+                if i != j and str(updated_item) == str(other_item):
+                    duplicate = True
+                    break
+
+            if duplicate:
+                st.error("This value would create a duplicate in the set.")
+            else:
+                items[i] = updated_item
+
+            delete_key = f"{key}_delete_{i}"
+            if st.button("Delete Item", key=delete_key, disabled=disabled):
+                items_to_delete.append(i)
+
+        if items_to_delete:
+            for idx in sorted(items_to_delete, reverse=True):
+                if 0 <= idx < len(items):
+                    items.pop(idx)
+            st.rerun()  # Force rerun after deletion
+
+    except Exception as e:  # noqa: BLE001
+        st.error(f"Error rendering set items: {e!s}")
+
+
+def display_set_readonly(value, field_type, key=None):
+    """Display a set in read-only mode."""
+    if not value:  # Empty set
+        st.text("No items")
+        return
+
+    item_type = Any
+    with contextlib.suppress(IndexError, TypeError):
+        item_type = get_args(field_type)[0]
+
+    # For known domain sets (enum or literal), show as comma-separated list
+    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(
+        item_type
+    ):
+        if isinstance(item_type, type) and issubclass(item_type, Enum):
+            display_text = ", ".join(item.name for item in value)
+        else:
+            display_text = ", ".join(str(item) for item in value)
+        st.text(display_text)
+    # For other sets, use the same expander approach as sequences
+    else:
+        for i, item in enumerate(value):
+            with st.expander(f"Item {i + 1}", expanded=False):
+                display_value_readonly(item, item_type, key=f"{key}_{i}" if key else None)
+
+
 def render_model_instance_field(
     *,
     key: str,
@@ -563,6 +774,9 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
     if is_union_type(annotation):
         return render_union_field
 
+    if is_set_type(annotation):
+        return render_set_field
+
     if is_sequence_type(annotation):
         return render_sequence_field
 
@@ -642,7 +856,10 @@ def display_value_readonly(value, field_type, key=None):
         st.text("—")  # Em dash to indicate empty value
         return
 
-    # Handle collections (lists, sets, etc.)
+    if is_set_type(field_type):
+        display_set_readonly(value, field_type, key)
+        return
+
     if is_sequence_type(field_type):
         display_sequence_readonly(value, field_type, key)
         return
@@ -754,10 +971,7 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
         return instance  # No changes in read-only mode
 
     result = {}
-
-    # Group fields by category if metadata exists, otherwise use "General"
     field_groups: dict[str, Any] = {}
-
     for field in fieldz.fields(model_class):
         # Check if field has a category defined
         category = "General"

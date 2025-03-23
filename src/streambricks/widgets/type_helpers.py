@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal, get_args, get_origin
 
 import fieldz
@@ -25,17 +26,21 @@ def is_union_type(annotation: Any) -> bool:
     )
 
 
-def is_sequence_type(annotation: Any) -> bool:
-    """Check if a type annotation is a sequence type."""
+def is_set_type(annotation: Any) -> bool:
+    """Check if the annotation represents a set type."""
+    if annotation is set:
+        return True
     origin = get_origin(annotation)
-    if origin is None:
-        return False
+    return origin is set
 
-    try:
-        return issubclass(origin, list | set | tuple)
-    except TypeError:
-        # Handle case where origin is not a class
-        return False
+
+def is_sequence_type(annotation: Any) -> bool:
+    """Check if an annotation represents a sequence type (except sets)."""
+    origin = get_origin(annotation)
+    if origin in (list, tuple, Sequence):
+        return True
+
+    return annotation in (list, tuple, Sequence)
 
 
 def get_with_default(obj: Any, field_name: str, field_info: Any = None) -> Any:  # noqa: PLR0911
