@@ -647,29 +647,29 @@ def display_value_readonly(value, field_type, key=None):
         display_sequence_readonly(value, field_type, key)
         return
 
-    # Handle nested models
     if is_dataclass_like(field_type):
         display_model_readonly(value, key)
         return
 
-    # Handle Enum values
     if isinstance(value, Enum):
         st.text(str(value.name))
         return
 
-    # Handle basic types
-    if isinstance(value, bool):
-        st.checkbox("", value=value, disabled=True, key=key)
-    elif isinstance(value, int | float | Decimal | date | time | datetime):
-        st.text(str(value))
-    elif isinstance(value, str):
-        if len(value) > 100:  # Long text  # noqa: PLR2004
-            st.text_area("", value=value, disabled=True, height=100, key=key)
-        else:
-            st.text(value)
-    else:
-        # Default fallback for other types
-        st.text(str(value))
+    match value:
+        case Enum() as enum_value:
+            st.text(str(enum_value.name))
+        case bool() as bool_value:
+            st.checkbox("", value=bool_value, disabled=True, key=key)
+        case int() | float() | Decimal() | date() | time() | datetime():
+            st.text(str(value))
+        case str() as str_value:
+            if len(str_value) > 100:  # noqa: PLR2004
+                st.text_area("", value=str_value, disabled=True, height=100, key=key)
+            else:
+                st.text(str_value)
+        case _:
+            # Default fallback for other types
+            st.text(str(value))
 
 
 def display_sequence_readonly(value, field_type, key=None):
@@ -810,38 +810,29 @@ if __name__ == "__main__":
     class TestModel(BaseModel):
         """Test model."""
 
-        status: int | str | bool = Field(
-            2, description="A field that can be either int, str, or bool"
-        )
-        optional_text: str | None = Field(None, description="Optional text field")
+        status: int | str | bool = 2
+        """A field that can be either int, str, or bool."""
 
-        # Lists with various types
-        tags: list[str] = Field(default_factory=list, description="A list of string tags")
-        numbers: list[int | float] = Field(
-            default_factory=list, description="A list of numbers (int or float)"
-        )
+        optional_text: str | None = None
+        """Optional text field."""
 
-        # Nested structures
-        settings: list[SubModel] = Field(
-            default_factory=list, description="A list of nested models"
-        )
+        tags: list[str] = Field(default_factory=list)
+        """A list of string tags."""
 
-        # Combined with literals
-        priorities: list[Literal["Low", "Medium", "High"]] = Field(
-            default_factory=list, description="A list of priority levels"
-        )
+        numbers: list[int | float] = Field(default_factory=list)
+        """A list of numbers (int or float)"""
+
+        settings: list[SubModel] = Field(default_factory=list)
+        """A list of nested models"""
+
+        priorities: list[Literal["Low", "Medium", "High"]] = Field(default_factory=list)
+        """A list of priority levels."""
 
     def demo():
         st.title("Pydantic Form Demo")
-
-        # Initialize or get model from session state
         if "model" not in st.session_state:
             st.session_state.model = TestModel(status=2, optional_text=None)
-
-        # Render the complete form and update the model
         st.session_state.model = render_model_form(TestModel)
-
-        # Display current model state
         with st.expander("Current Model State", expanded=True):
             st.json(st.session_state.model.model_dump_json(indent=2))
 
