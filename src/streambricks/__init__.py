@@ -11,11 +11,11 @@ from streambricks.widgets.model_selector import (
     model_selector as llm_model_selector,
 )
 from streambricks.helpers import run
-from streambricks.state import get_state
+from streambricks.state import State
 
 __all__ = [
     "MultiSelectItem",
-    "get_state",
+    "State",
     "llm_model_selector",
     "model_display",
     "model_edit",
