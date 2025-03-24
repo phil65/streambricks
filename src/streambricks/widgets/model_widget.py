@@ -813,17 +813,23 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
     raise ValueError(error_msg)
 
 
-def render_model_readonly[T](model_class: type[T], instance: T | None = None):
+def render_model_readonly[T](
+    model_class: type[T],
+    instance: T | None = None,
+    exclude: set[str] | None = None,
+):
     """Render a model in read-only mode using a clean label-based layout."""
+    excluded_fields = exclude or set()
     if instance is None:
         st.info("No data available")
         return
 
-    # Create a container for the model display
     with st.container():
         # Get all fields from the model
         for field in fieldz.fields(model_class):
             field_name = field.name
+            if field_name in excluded_fields:
+                continue
             field_value = getattr(instance, field_name, None)
             field_type = field.type
             label = field_name.replace("_", " ").title()
@@ -949,16 +955,30 @@ TForm = TypeVar("TForm", bound="BaseModel")
 
 @overload
 def render_model_form(
-    model_or_instance: type[TForm], *, readonly: bool = False
+    model_or_instance: type[TForm],
+    *,
+    readonly: bool = False,
+    exclude: set[str] | None = None,
 ) -> TForm: ...
 
 
 @overload
-def render_model_form(model_or_instance: TForm, *, readonly: bool = False) -> TForm: ...
+def render_model_form(
+    model_or_instance: TForm,
+    *,
+    readonly: bool = False,
+    exclude: set[str] | None = None,
+) -> TForm: ...
 
 
-def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
+def render_model_form(
+    model_or_instance,
+    *,
+    readonly: bool = False,
+    exclude: set[str] | None = None,
+) -> Any:
     """Render a complete form for a model class or instance using compact layout."""
+    excluded_fields = exclude or set()
     if isinstance(model_or_instance, type):
         model_class = model_or_instance
         instance = model_class()  # Create a default instance
@@ -967,7 +987,7 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
         model_class = instance.__class__
 
     if readonly:
-        render_model_readonly(model_class, instance)
+        render_model_readonly(model_class, instance, exclude=excluded_fields)
         return instance  # No changes in read-only mode
 
     result = {}
@@ -991,6 +1011,8 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
             with tabs[i]:
                 for field in fields:
                     field_name = field.name
+                    if field_name in excluded_fields:
+                        continue
                     current_value = get_with_default(instance, field_name, field)
                     result[field_name] = render_model_field(
                         model_class, field_name, current_value
@@ -999,6 +1021,8 @@ def render_model_form(model_or_instance, *, readonly: bool = False) -> Any:
         # Single category, render fields directly
         for field in fieldz.fields(model_class):
             field_name = field.name
+            if field_name in excluded_fields:
+                continue
             current_value = get_with_default(instance, field_name, field)
             result[field_name] = render_model_field(
                 model_class, field_name, current_value
