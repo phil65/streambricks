@@ -260,6 +260,45 @@ def render_secret_str_field(
     return SecretStr(text)
 
 
+def render_datetime_field(
+    *,
+    key: str,
+    value: datetime | None = None,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+    **field_info: Any,
+) -> datetime:
+    """Render a datetime field using date and time inputs."""
+    # Split into date and time components
+    current_date = value.date() if value else date.today()
+    current_time = value.time() if value else datetime.now().time()
+
+    # Create columns for date and time
+    date_col, time_col = st.columns(2)
+
+    with date_col:
+        selected_date = st.date_input(
+            label=f"{label or key} (Date)",
+            value=current_date,
+            disabled=disabled,
+            key=f"{key}_date",
+            help=help,
+        )
+
+    with time_col:
+        selected_time = st.time_input(
+            label=f"{label or key} (Time)",
+            value=current_time,
+            disabled=disabled,
+            key=f"{key}_time",
+            help=help,
+        )
+
+    # Combine date and time
+    return datetime.combine(selected_date, selected_time)
+
+
 def render_literal_field(
     *,
     key: str,
@@ -777,6 +816,7 @@ PRIMITIVE_RENDERERS = {
     bool: render_bool_field,
     date: render_date_field,
     time: render_time_field,
+    datetime: render_datetime_field,
     Enum: render_enum_field,
     Literal: render_literal_field,
     SecretStr: render_secret_str_field,
@@ -906,6 +946,8 @@ def display_value_readonly(value, field_type, key=None):
             st.text(str(enum_value.name))
         case bool() as bool_value:
             st.checkbox("", value=bool_value, disabled=True, key=key)
+        case datetime():
+            st.text(value.strftime("%Y-%m-%d %H:%M:%S"))
         case int() | float() | Decimal() | date() | time() | datetime():
             st.text(str(value))
         case str() as str_value:
