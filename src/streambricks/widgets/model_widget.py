@@ -810,10 +810,10 @@ def render_model_instance_field(
 # Mapping of Python types to render functions
 PRIMITIVE_RENDERERS = {
     str: render_str_field,
+    bool: render_bool_field,
     int: render_int_field,
     float: render_float_field,
     Decimal: render_float_field,
-    bool: render_bool_field,
     date: render_date_field,
     time: render_time_field,
     datetime: render_datetime_field,
@@ -1117,7 +1117,7 @@ if __name__ == "__main__":
         status: int | str | bool = 2
         """A field that can be either int, str, or bool."""
 
-        optional_text: SecretStr | None = None
+        optional_text: bool = True
         """Optional text field."""
 
         tags: list[str] = Field(default_factory=list)
@@ -1135,7 +1135,7 @@ if __name__ == "__main__":
     def demo():
         st.title("Pydantic Form Demo")
         if "model" not in st.session_state:
-            st.session_state.model = TestModel(status=2, optional_text=None)
+            st.session_state.model = TestModel(status=2)
         st.session_state.model = render_model_form(TestModel)
         with st.expander("Current Model State", expanded=True):
             st.json(st.session_state.model.model_dump_json(indent=2))
