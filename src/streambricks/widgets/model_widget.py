@@ -498,7 +498,7 @@ def render_set_field(
         item_type = Any
 
     # Check if item_type is an enum or literal - if so, we know all possible values
-    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(
+    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(  # pyright: ignore
         item_type
     ):
         return render_set_with_known_domain(
@@ -661,7 +661,7 @@ def render_set_items(
 
 def display_set_readonly(value, field_type, key=None):
     """Display a set in read-only mode."""
-    if not value:  # Empty set
+    if not value:
         st.text("No items")
         return
 
@@ -670,10 +670,10 @@ def display_set_readonly(value, field_type, key=None):
         item_type = get_args(field_type)[0]
 
     # For known domain sets (enum or literal), show as comma-separated list
-    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(
+    if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(  # pyright: ignore
         item_type
     ):
-        if isinstance(item_type, type) and issubclass(item_type, Enum):
+        if isinstance(item_type, type) and issubclass(item_type, Enum):  # pyright: ignore
             display_text = ", ".join(item.name for item in value)
         else:
             display_text = ", ".join(str(item) for item in value)
@@ -718,14 +718,10 @@ def render_model_instance_field(
 
     # Use an expander for the nested model fields
     with st.expander("Edit", expanded=True):
-        # Render each field of the nested model
         updated_value = {}
-
         try:
             for field in fieldz.fields(model_class):
                 field_name = field.name
-
-                # Get field value and handle 'MISSING' with type-appropriate defaults
                 field_value = get_with_default(value, field_name, field)
                 field_help = get_description(field)
                 nested_field_info = {"name": field_name, "type": field.type}
