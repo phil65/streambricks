@@ -32,7 +32,7 @@ class State(BaseModel):
         return st.session_state[state_key]
 
     @classmethod
-    def set(cls, *, key: str | None = None, value: Self):
+    def set_state(cls, *, key: str | None = None, value: Self):
         """Set state to given model.
 
         Args:
@@ -51,3 +51,25 @@ class State(BaseModel):
         """
         state_key = key or cls.__name__
         st.session_state[state_key] = cls()
+
+    def form(self, read_only: bool = False, exclude: set[str] | None = None) -> Self:
+        """Display (editable) state as a model form.
+
+        Args:
+            read_only: Whether to display the form in read-only mode.
+            exclude: Optional set of field names to exclude from the form.
+
+        Returns:
+            The updated state instance.
+        """
+        from streambricks.widgets import model_widget
+
+        return model_widget.render_model_form(self, readonly=read_only, exclude=exclude)
+
+
+if __name__ == "__main__":
+
+    class TestState(State):
+        test: int = 1
+
+    state = TestState.get()

@@ -38,12 +38,8 @@ def multiselect[T](
     Returns:
         List of selected MultiSelectItem objects
     """
-    # Create full state key
     full_key = f"multiselect_{state_key}"
-
-    # Map for looking up items by label
     item_map = {str(item): item for item in items}
-
     # Initialize state if needed
     if full_key not in st.session_state:
         default_selection = list(item_map.keys()) if default_all else []
@@ -64,10 +60,7 @@ def multiselect[T](
         key=f"{full_key}_widget",
     )
 
-    # Update session state
     st.session_state[full_key] = selected_labels
-
-    # Return the actual selected items
     return [item_map[label] for label in selected_labels]
 
 
