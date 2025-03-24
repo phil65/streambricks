@@ -10,6 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin, overload
 
 import fieldz
+from pydantic import SecretStr
 import streamlit as st
 
 from streambricks.widgets.type_helpers import (
@@ -236,6 +237,27 @@ def render_enum_field(
         key=key,
         help=help,
     )
+
+
+def render_secret_str_field(
+    *,
+    key: str,
+    value: str | None = None,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+    **field_info: Any,
+) -> SecretStr:
+    """Render a SecretStr field using a password input."""
+    text = st.text_input(
+        label=label or key,
+        value=value or "",
+        disabled=disabled,
+        key=key,
+        help=help,
+        type="password",
+    )
+    return SecretStr(text)
 
 
 def render_literal_field(
@@ -757,12 +779,17 @@ PRIMITIVE_RENDERERS = {
     time: render_time_field,
     Enum: render_enum_field,
     Literal: render_literal_field,
+    SecretStr: render_secret_str_field,
 }
 
 
 def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: PLR0911
     """Get the appropriate renderer for a field based on its type and constraints."""
     annotation = field_info.get("type") or field_info.get("annotation")
+    if annotation is SecretStr or (
+        isinstance(annotation, type) and issubclass(annotation, SecretStr)
+    ):
+        return render_secret_str_field
 
     if is_literal_type(annotation):
         return render_literal_field
@@ -886,8 +913,9 @@ def display_value_readonly(value, field_type, key=None):
                 st.text_area("", value=str_value, disabled=True, height=100, key=key)
             else:
                 st.text(str_value)
+        case SecretStr():
+            st.text("********")
         case _:
-            # Default fallback for other types
             st.text(str(value))
 
 
@@ -1047,7 +1075,7 @@ if __name__ == "__main__":
         status: int | str | bool = 2
         """A field that can be either int, str, or bool."""
 
-        optional_text: str | None = None
+        optional_text: SecretStr | None = None
         """Optional text field."""
 
         tags: list[str] = Field(default_factory=list)
