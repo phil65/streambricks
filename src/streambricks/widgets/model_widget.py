@@ -242,7 +242,7 @@ def render_enum_field(
 def render_secret_str_field(
     *,
     key: str,
-    value: str | None = None,
+    value: SecretStr | None = None,
     label: str | None = None,
     disabled: bool = False,
     help: str | None = None,  # noqa: A002
@@ -251,7 +251,7 @@ def render_secret_str_field(
     """Render a SecretStr field using a password input."""
     text = st.text_input(
         label=label or key,
-        value=value or "",
+        value=value.get_secret_value() if value else "",
         disabled=disabled,
         key=key,
         help=help,
