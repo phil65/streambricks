@@ -12,10 +12,12 @@ from streambricks.widgets.model_selector import (
 )
 from streambricks.helpers import run
 from streambricks.state import State
+from streambricks.widgets.bind_kwargs import bind_kwargs_as_widget
 
 __all__ = [
     "MultiSelectItem",
     "State",
+    "bind_kwargs_as_widget",
     "llm_model_selector",
     "model_display",
     "model_edit",
