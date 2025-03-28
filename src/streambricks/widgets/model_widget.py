@@ -45,19 +45,27 @@ def render_str_field(
     """Render a string field using appropriate Streamlit widget."""
     max_length = field_info.get("max_length", 0)
     multiple_lines = field_info.get("multiple_lines", False)
+    safe_value = "" if value is None else value
+    has_meaningful_content = safe_value.strip() != ""
+    has_line_breaks = has_meaningful_content and (
+        "\n" in safe_value or "\r" in safe_value
+    )
+    is_long_val = len(safe_value) > 100  # noqa: PLR2004
+    use_text_area = max_length > 100 or is_long_val or multiple_lines or has_line_breaks  # noqa: PLR2004
 
-    if max_length > 100 or multiple_lines:  # noqa: PLR2004
+    if use_text_area:
         return st.text_area(
             label=label or key,
-            value=value or "",
+            value=safe_value,
             disabled=disabled,
             key=key,
             help=help,
         )
 
+    # For single-line inputs, strip whitespace as it's usually unintentional
     return st.text_input(
         label=label or key,
-        value=value or "",
+        value=safe_value.strip() if has_meaningful_content else safe_value,
         disabled=disabled,
         key=key,
         help=help,
@@ -1116,19 +1124,17 @@ if __name__ == "__main__":
 
         status: int | str | bool = 2
         """A field that can be either int, str, or bool."""
-
-        optional_text: bool = True
+        boolean: bool = True
         """Optional text field."""
+        long_text: str = "test " * 40
+        """Long text."""
 
         tags: list[str] = Field(default_factory=list)
         """A list of string tags."""
-
         numbers: list[int | float] = Field(default_factory=list)
         """A list of numbers (int or float)"""
-
         settings: list[SubModel] = Field(default_factory=list)
         """A list of nested models"""
-
         priorities: list[Literal["Low", "Medium", "High"]] = Field(default_factory=list)
         """A list of priority levels."""
 
