@@ -6,10 +6,10 @@ from collections.abc import Callable, Sequence
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin, overload
+from typing import Any, Literal, TypeVar, get_args, get_origin, overload
 
 import fieldz
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 import streamlit as st
 
 from streambricks.widgets.model_widget.field_metadata_renderers import (
@@ -41,9 +41,6 @@ from streambricks.widgets.type_helpers import (
 )
 
 
-if TYPE_CHECKING:
-    from pydantic import BaseModel
-
 T = TypeVar("T")
 WidgetFunc = Callable[..., T]
 TForm = TypeVar("TForm", bound=BaseModel)
@@ -54,7 +51,6 @@ FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {
 }
 
 
-# Mapping of Python types to render functions
 PRIMITIVE_RENDERERS = {
     str: render_str_field,
     bool: render_bool_field,
