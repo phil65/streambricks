@@ -690,7 +690,9 @@ def render_model_field(model_class, field_name, value=None, container=st):
         raise ValueError(error_msg)
     field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field.native_field, "json_schema_extra"):
-        field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
+        dct = field.native_field.json_schema_extra or {}  # type: ignore
+        field_info.update(dct)
+        field_info["json_schema_extra"] = dct
     label = field_name.replace("_", " ").title()
     help_text = get_description(field)
     if help_text:
