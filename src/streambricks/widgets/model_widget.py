@@ -32,6 +32,33 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 WidgetFunc = Callable[..., T]
 
+FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {}
+
+
+def register_field_renderer(field_type: str, renderer: WidgetFunc[Any]) -> None:
+    """Register a custom field renderer for a specific field_type."""
+    FIELD_METADATA_RENDERERS[field_type] = renderer
+
+
+def render_model_identifier_field(
+    *,
+    key: str,
+    value: str | None = None,
+    label: str | None = None,
+    disabled: bool = False,
+    help: str | None = None,  # noqa: A002
+    **field_info: Any,
+) -> str:
+    """Render a model identifier field using model_selector widget."""
+    from streambricks.widgets.model_selector import model_selector
+
+    providers = field_info.get("providers")
+    selected_model = model_selector(value=value, providers=providers, expanded=False)
+    return selected_model.pydantic_ai_id if selected_model else value or ""
+
+
+register_field_renderer("model_identifier", render_model_identifier_field)
+
 
 def render_str_field(
     *,
@@ -891,6 +918,14 @@ PRIMITIVE_RENDERERS = {
 def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: PLR0911
     """Get the appropriate renderer for a field based on its type and constraints."""
     annotation = field_info.get("type") or field_info.get("annotation")
+    # Check for custom field type specification in json_schema_extra
+    json_schema_extra = field_info.get("json_schema_extra", {})
+    if (
+        json_schema_extra
+        and (field_type := json_schema_extra.get("field_type"))
+        in FIELD_METADATA_RENDERERS
+    ):
+        return FIELD_METADATA_RENDERERS[field_type]
     if annotation is SecretStr or (
         isinstance(annotation, type) and issubclass(annotation, SecretStr)
     ):
