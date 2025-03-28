@@ -308,10 +308,7 @@ def render_datetime_field(
     # Split into date and time components
     current_date = value.date() if value else date.today()
     current_time = value.time() if value else datetime.now().time()
-
-    # Create columns for date and time
     date_col, time_col = st.columns(2)
-
     with date_col:
         selected_date = st.date_input(
             label=f"{label or key} (Date)",
@@ -320,7 +317,6 @@ def render_datetime_field(
             key=f"{key}_date",
             help=help,
         )
-
     with time_col:
         selected_time = st.time_input(
             label=f"{label or key} (Time)",
@@ -330,7 +326,6 @@ def render_datetime_field(
             help=help,
         )
 
-    # Combine date and time
     return datetime.combine(selected_date, selected_time)
 
 
@@ -346,12 +341,8 @@ def render_literal_field(
     """Render a Literal field using appropriate Streamlit widget."""
     annotation = field_info.get("type") or field_info.get("annotation")
     options = get_args(annotation)
-
-    # No need for radio if only one option
     if len(options) == 1:
         return options[0]
-
-    # Use radio for boolean literals
     if all(isinstance(opt, bool) for opt in options):
         index = options.index(value) if value in options else 0
         return st.radio(
@@ -388,13 +379,10 @@ def render_union_field(  # noqa: PLR0911
     """Render a field that can accept multiple types."""
     annotation = field_info.get("type") or field_info.get("annotation")
     possible_types = get_args(annotation)
-
-    # Create type selector
     type_key = f"{key}_type"
     type_names = [
         t.__name__ if hasattr(t, "__name__") else str(t) for t in possible_types
     ]
-
     selected_type_name = st.selectbox(
         f"Type for {label or key}",
         options=type_names,
@@ -403,19 +391,13 @@ def render_union_field(  # noqa: PLR0911
         help=help,
     )
 
-    # Find selected type
     selected_type_index = type_names.index(selected_type_name)
     selected_type = possible_types[selected_type_index]
-
-    # Create field for selected type
     field_key = f"{key}_value"
     modified_field_info = field_info.copy()
     modified_field_info["type"] = selected_type
-
-    # Only pass value if it matches the selected type or can be converted
     typed_value: Any = None
     if value is not None:
-        # Try to convert the value to the selected type
         try:
             if selected_type is int and isinstance(value, int | float):
                 typed_value = int(value)
@@ -435,13 +417,12 @@ def render_union_field(  # noqa: PLR0911
     result = renderer(
         key=field_key,
         value=typed_value,
-        label=f"Value ({selected_type_name})",  # More descriptive label
+        label=f"Value ({selected_type_name})",
         disabled=disabled,
         help=help,
         **modified_field_info,
     )
 
-    # Ensure the result is of the correct type
     try:
         if selected_type is int and not isinstance(result, int):
             return int(result)
@@ -454,7 +435,6 @@ def render_union_field(  # noqa: PLR0911
     except (ValueError, TypeError) as e:
         error_msg = f"Cannot convert {result} to {selected_type.__name__}: {e!s}"
         st.error(error_msg)
-        # Return a default value for the selected type
         if selected_type is int:
             return 0
         if selected_type is float:
@@ -489,32 +469,22 @@ def render_sequence_field(
 ) -> list[Any]:
     """Render a field for sequence types (list, tuple, set)."""
     annotation = field_info.get("type") or field_info.get("annotation")
-
-    # Create unique state keys for this field
     add_item_key = f"{key}_add_item"
     items_key = f"{key}_items"
-
-    # Initialize session state for this field
     if items_key not in st.session_state:
         st.session_state[items_key] = list(value) if value is not None else []
-
-    # Extract item type from sequence annotation
     try:
         item_type = get_args(annotation)[0]  # Get type of sequence items
     except (IndexError, TypeError):
         item_type = Any
 
-    # Create container for sequence elements
     st.markdown(f"**{label or key}**")
     if help:
         st.caption(help)
 
     with st.container():
-        # Add new item button
         if st.button("Add Item", key=add_item_key, disabled=disabled):
             add_new_item(st.session_state[items_key], item_type)
-
-        # Render items
         render_sequence_items(
             st.session_state[items_key],
             item_type,
@@ -524,7 +494,6 @@ def render_sequence_field(
             field_info,
         )
 
-    # Return the current items
     return st.session_state[items_key]
 
 
@@ -539,7 +508,7 @@ def render_sequence_items(
     """Render items in a sequence with delete buttons."""
     item_info = field_info.copy()
     item_info["type"] = item_type
-    item_info["inside_expander"] = True  # Mark as inside a container
+    item_info["inside_expander"] = True
 
     try:
         renderer = get_field_renderer(item_info)
@@ -582,18 +551,13 @@ def render_set_field(
 ) -> set[Any]:
     """Render a field for set types with a multi-select interface when possible."""
     annotation = field_info.get("type") or field_info.get("annotation")
-
-    # Initialize empty set if value is None
     if value is None:
         value = set()
-
-    # Extract item type from set annotation
     try:
         item_type = get_args(annotation)[0]  # Get type of set items
     except (IndexError, TypeError):
         item_type = Any
 
-    # Check if item_type is an enum or literal - if so, we know all possible values
     if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(  # pyright: ignore
         item_type
     ):
@@ -606,7 +570,6 @@ def render_set_field(
             help=help,
         )
 
-    # For open-ended sets, use a modified sequence renderer that ensures uniqueness
     return render_open_set_field(
         key=key,
         value=value,
@@ -660,19 +623,13 @@ def render_open_set_field(
     **field_info: Any,
 ) -> set[Any]:
     """Render an open-ended set field with uniqueness enforcement."""
-    # Create unique state keys for this field
     add_item_key = f"{key}_add_item"
     items_key = f"{key}_items"
-
-    # Initialize session state for this field
     if items_key not in st.session_state:
         st.session_state[items_key] = list(value)
-
-    # Create container for set elements
     st.markdown(f"**{label or key}**")
     if help:
         st.caption(help)
-
     with st.container():
         if st.button("Add Item", key=add_item_key, disabled=disabled):
             temp_list: list[Any] = []
@@ -710,7 +667,7 @@ def render_set_items(
     """Render items in a set with delete buttons and uniqueness enforcement."""
     item_info = field_info.copy()
     item_info["type"] = item_type
-    item_info["inside_expander"] = True  # Mark as inside a container
+    item_info["inside_expander"] = True
 
     try:
         renderer = get_field_renderer(item_info)
@@ -729,7 +686,6 @@ def render_set_items(
                 **item_info,
             )
 
-            # Check if this update would create a duplicate
             duplicate = False
             for j, other_item in enumerate(items):
                 if i != j and str(updated_item) == str(other_item):
@@ -749,7 +705,7 @@ def render_set_items(
             for idx in sorted(items_to_delete, reverse=True):
                 if 0 <= idx < len(items):
                     items.pop(idx)
-            st.rerun()  # Force rerun after deletion
+            st.rerun()
 
     except Exception as e:  # noqa: BLE001
         st.error(f"Error rendering set items: {e!s}")
@@ -800,13 +756,8 @@ def wrap_as_optional_field(renderer: WidgetFunc) -> WidgetFunc:
         help: str | None = None,  # noqa: A002
         **field_info: Any,
     ) -> Any:
-        # Create a layout for the field
         enable_key = f"{key}_enable"
-
-        # Create columns for checkbox and content
         cols = st.columns([0.1, 0.9])
-
-        # Toggle checkbox in first column
         with cols[0]:
             is_enabled = st.checkbox(
                 "Enable",
@@ -815,15 +766,11 @@ def wrap_as_optional_field(renderer: WidgetFunc) -> WidgetFunc:
                 disabled=disabled,
                 label_visibility="collapsed",
             )
-
-        # Content in second column
         with cols[1]:
             # Show field label
             st.markdown(f"**{label or key}**")
             if help:
                 st.caption(help)
-
-            # If enabled, render the field; otherwise show "None"
             if is_enabled:
                 return renderer(
                     key=key,
@@ -864,12 +811,10 @@ def render_model_instance_field(
                 st.error(error_msg)
                 return None
 
-    # Show a header for the nested model with help text if available
     st.markdown(f"**{label or key}**")
     if help:
         st.caption(help)
 
-    # Use an expander for the nested model fields
     with st.expander("Edit", expanded=True):
         updated_value = {}
         try:
