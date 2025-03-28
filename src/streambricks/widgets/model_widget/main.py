@@ -293,15 +293,12 @@ def render_set_with_known_domain(
     help: str | None = None,  # noqa: A002
 ) -> set[Any]:
     """Render a set field using a multiselect when domain is known (enum or literal)."""
-    # Get all possible values
     if isinstance(item_type, type) and issubclass(item_type, Enum):
         all_options = list(item_type.__members__.values())
         format_func = lambda x: x.name  # noqa: E731
     else:  # Literal type
         all_options = list(get_args(item_type))
         format_func = str
-
-    # Use multi-select for known domain
     selected = st.multiselect(
         label=label or key,
         options=all_options,
@@ -336,7 +333,6 @@ def render_open_set_field(
         if st.button("Add Item", key=add_item_key, disabled=disabled):
             temp_list: list[Any] = []
             add_new_item(temp_list, item_type)
-
             # If the temp_list has an item and it's not a duplicate, add it to our items
             if temp_list and str(temp_list[0]) not in {
                 str(i) for i in st.session_state[items_key]
@@ -370,16 +366,12 @@ def render_set_items(
     item_info = field_info.copy()
     item_info["type"] = item_type
     item_info["inside_expander"] = True
-
     try:
         renderer = get_field_renderer(item_info)
         items_to_delete = []
-
         for i, item in enumerate(items):
             st.divider()
             st.markdown(f"**Item {i + 1}**")
-
-            # Render the item
             updated_item = renderer(
                 key=f"{key}_item_{i}",
                 value=item,
@@ -387,22 +379,18 @@ def render_set_items(
                 disabled=disabled,
                 **item_info,
             )
-
             duplicate = False
             for j, other_item in enumerate(items):
                 if i != j and str(updated_item) == str(other_item):
                     duplicate = True
                     break
-
             if duplicate:
                 st.error("This value would create a duplicate in the set.")
             else:
                 items[i] = updated_item
-
             delete_key = f"{key}_delete_{i}"
             if st.button("Delete Item", key=delete_key, disabled=disabled):
                 items_to_delete.append(i)
-
         if items_to_delete:
             for idx in sorted(items_to_delete, reverse=True):
                 if 0 <= idx < len(items):
@@ -527,10 +515,8 @@ def render_model_instance_field(
                 nested_field_info = {"name": field_name, "type": field.type}
                 if field_help:
                     nested_field_info["help"] = field_help
-
                 if hasattr(field.native_field, "json_schema_extra"):
                     nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
-
                 renderer = get_field_renderer(nested_field_info)
                 updated_value[field_name] = renderer(
                     key=f"{key}_{field_name}",
@@ -549,7 +535,6 @@ def render_model_instance_field(
 def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: PLR0911
     """Get the appropriate renderer for a field based on its type and constraints."""
     annotation = field_info.get("type") or field_info.get("annotation")
-    # Check for custom field type specification in json_schema_extra
     json_schema_extra = field_info.get("json_schema_extra", {})
     if (
         json_schema_extra
@@ -638,7 +623,6 @@ def render_model_readonly[T](
 
 def render_field_readonly(label, value, field_type, description=None, key=None):
     """Render a single field in read-only mode."""
-    # Create a container with two columns: label and value
     cols = st.columns([0.3, 0.7])
     with cols[0]:
         st.markdown(f"**{label}:**")
@@ -727,17 +711,13 @@ def render_model_field(model_class, field_name, value=None, container=st):
     if field is None:
         error_msg = f"Field {field_name} not found in {model_class.__name__}"
         raise ValueError(error_msg)
-
-    # Extract field metadata
     field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field.native_field, "json_schema_extra"):
         field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
-
     label = field_name.replace("_", " ").title()
     help_text = get_description(field)
     if help_text:
         field_info["help"] = help_text
-
     renderer = get_field_renderer(field_info)
     return renderer(
         key=field_name,
