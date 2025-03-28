@@ -26,6 +26,15 @@ def is_union_type(annotation: Any) -> bool:
     )
 
 
+def is_optional_type(annotation: Any) -> bool:
+    """Check if a type annotation is an Optional type (T | None)."""
+    if not is_union_type(annotation):
+        return False
+
+    args = get_args(annotation)
+    return type(None) in args
+
+
 def is_set_type(annotation: Any) -> bool:
     """Check if the annotation represents a set type."""
     if annotation is set:

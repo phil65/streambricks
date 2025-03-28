@@ -754,6 +754,63 @@ def display_set_readonly(value, field_type, key=None):
                 display_value_readonly(item, item_type, key=f"{key}_{i}" if key else None)
 
 
+def wrap_as_optional_field(renderer: WidgetFunc) -> WidgetFunc:
+    """Wrap a field renderer with None toggle functionality.
+
+    Args:
+        renderer: The inner renderer function
+
+    Returns:
+        A new renderer that handles None values with a toggle
+    """
+
+    def optional_wrapper(
+        *,
+        key: str,
+        value: Any = None,
+        label: str | None = None,
+        disabled: bool = False,
+        help: str | None = None,  # noqa: A002
+        **field_info: Any,
+    ) -> Any:
+        # Create a layout for the field
+        enable_key = f"{key}_enable"
+
+        # Create columns for checkbox and content
+        cols = st.columns([0.1, 0.9])
+
+        # Toggle checkbox in first column
+        with cols[0]:
+            is_enabled = st.checkbox(
+                "Enable",
+                value=value is not None,
+                key=enable_key,
+                disabled=disabled,
+                label_visibility="collapsed",
+            )
+
+        # Content in second column
+        with cols[1]:
+            # Show field label
+            st.markdown(f"**{label or key}**")
+            if help:
+                st.caption(help)
+
+            # If enabled, render the field; otherwise show "None"
+            if is_enabled:
+                return renderer(
+                    key=key,
+                    value=value,
+                    label="",  # We've already shown the label
+                    disabled=disabled,
+                    **field_info,
+                )
+            st.text("None")
+            return None
+
+    return optional_wrapper
+
+
 def render_model_instance_field(
     *,
     key: str,
@@ -1126,8 +1183,16 @@ if __name__ == "__main__":
         """A field that can be either int, str, or bool."""
         boolean: bool = True
         """Optional text field."""
-        long_text: str = "test " * 40
+        long_text: str | None = "test " * 40
         """Long text."""
+
+        # Fields that demonstrate the optional toggle
+        optional_int: int | None = None
+        """An optional integer that can be None."""
+        optional_string: str | None = None
+        """An optional string that can be None."""
+        optional_model: SubModel | None = None
+        """An optional nested model that can be None."""
 
         tags: list[str] = Field(default_factory=list)
         """A list of string tags."""
