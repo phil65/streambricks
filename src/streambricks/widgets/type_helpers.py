@@ -225,3 +225,11 @@ def add_new_item(items_list: list, item_type: Any) -> None:
     else:
         # For unknown types, add None
         items_list.append(None)
+
+
+def get_inner_type(field_info: Any) -> Any:
+    annotation = field_info.get("type") or field_info.get("annotation")
+    try:
+        return get_args(annotation)[0]  # Get type of set items
+    except (IndexError, TypeError):
+        return Any

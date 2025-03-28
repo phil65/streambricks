@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-import contextlib
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
@@ -32,6 +31,7 @@ from streambricks.widgets.type_helpers import (
     add_new_item,
     create_default_instance,
     get_description,
+    get_inner_type,
     get_with_default,
     is_dataclass_like,
     is_literal_type,
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 WidgetFunc = Callable[..., T]
+TForm = TypeVar("TForm", bound=BaseModel)
 
 
 FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {
@@ -170,16 +171,11 @@ def render_sequence_field(
     **field_info: Any,
 ) -> list[Any]:
     """Render a field for sequence types (list, tuple, set)."""
-    annotation = field_info.get("type") or field_info.get("annotation")
     add_item_key = f"{key}_add_item"
     items_key = f"{key}_items"
     if items_key not in st.session_state:
         st.session_state[items_key] = list(value) if value is not None else []
-    try:
-        item_type = get_args(annotation)[0]  # Get type of sequence items
-    except (IndexError, TypeError):
-        item_type = Any
-
+    item_type = get_inner_type(field_info)
     st.markdown(f"**{label or key}**")
     if help:
         st.caption(help)
@@ -252,14 +248,9 @@ def render_set_field(
     **field_info: Any,
 ) -> set[Any]:
     """Render a field for set types with a multi-select interface when possible."""
-    annotation = field_info.get("type") or field_info.get("annotation")
     if value is None:
         value = set()
-    try:
-        item_type = get_args(annotation)[0]  # Get type of set items
-    except (IndexError, TypeError):
-        item_type = Any
-
+    item_type = get_inner_type(field_info)
     if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(  # pyright: ignore
         item_type
     ):
@@ -407,10 +398,7 @@ def display_set_readonly(value, field_type, key=None):
         st.text("No items")
         return
 
-    item_type = Any
-    with contextlib.suppress(IndexError, TypeError):
-        item_type = get_args(field_type)[0]
-
+    item_type = get_inner_type(field_type)
     # For known domain sets (enum or literal), show as comma-separated list
     if (isinstance(item_type, type) and issubclass(item_type, Enum)) or is_literal_type(  # pyright: ignore
         item_type
@@ -546,19 +534,14 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
         isinstance(annotation, type) and issubclass(annotation, SecretStr)
     ):
         return render_secret_str_field
-
     if is_literal_type(annotation):
         return render_literal_field
-
     if is_union_type(annotation):
         return render_union_field
-
     if is_set_type(annotation):
         return render_set_field
-
     if is_sequence_type(annotation):
         return render_sequence_field
-
     origin = get_origin(annotation)
     if origin is not None:
         args = get_args(annotation)
@@ -681,9 +664,7 @@ def display_sequence_readonly(value, field_type, key=None):
     if not value:  # Empty sequence
         st.text("No items")
         return
-    item_type = Any
-    with contextlib.suppress(IndexError, TypeError):
-        item_type = get_args(field_type)[0]
+    item_type = get_inner_type(field_type)
     for i, item in enumerate(value):
         with st.expander(f"Item {i + 1}", expanded=False):
             display_value_readonly(item, item_type, key=f"{key}_{i}" if key else None)
@@ -719,15 +700,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
     if help_text:
         field_info["help"] = help_text
     renderer = get_field_renderer(field_info)
-    return renderer(
-        key=field_name,
-        value=value,
-        label=label,
-        **field_info,
-    )
-
-
-TForm = TypeVar("TForm", bound="BaseModel")
+    return renderer(key=field_name, value=value, label=label, **field_info)
 
 
 @overload
@@ -832,7 +805,6 @@ if __name__ == "__main__":
         long_text: str | None = "test " * 40
         """Long text."""
 
-        # Fields that demonstrate the optional toggle
         optional_int: int | None = None
         """An optional integer that can be None."""
         optional_string: str | None = None
