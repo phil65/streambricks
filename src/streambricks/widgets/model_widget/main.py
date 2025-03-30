@@ -38,6 +38,7 @@ from streambricks.widgets.type_helpers import (
     is_sequence_type,
     is_set_type,
     is_union_type,
+    unpack_annotated,
 )
 
 
@@ -465,7 +466,7 @@ def render_model_instance_field(
     value: Any = None,
     label: str | None = None,
     disabled: bool = False,
-    help: str | None = None,  # noqa: A002  # Added help parameter
+    help: str | None = None,  # noqa: A002
     **field_info: Any,
 ) -> Any:
     """Render a nested model instance field."""
@@ -474,8 +475,32 @@ def render_model_instance_field(
         error_msg = f"Model class not provided for field {key}"
         raise ValueError(error_msg)
 
-    # Initialize value if none
-    if value is None:
+    # Handle Union types (including Python 3.10+ pipe syntax)
+    if is_union_type(model_class) or hasattr(model_class, "__or__"):
+        model_type_name = getattr(
+            model_class,
+            "__name__",
+            "Union[" + ", ".join(str(t) for t in get_args(model_class)) + "]",
+        )
+
+        # Initialize value if none
+        if value is None:
+            # For Union types, try to create an instance of the first model type
+            possible_types = get_args(model_class)
+            for possible_type in possible_types:
+                if is_dataclass_like(possible_type):
+                    try:
+                        value = try_create_default_instance(possible_type)
+                        if value is not None:
+                            break
+                    except Exception:  # noqa: BLE001
+                        continue
+
+            if value is None:
+                st.error(f"Could not create instance of any type in {model_type_name}")
+                return None
+    # Initialize value if none for non-union types
+    elif value is None:
         value = try_create_default_instance(model_class)
         if value is None:  # If creation failed
             try:
@@ -492,7 +517,9 @@ def render_model_instance_field(
     with st.expander("Edit", expanded=True):
         updated_value = {}
         try:
-            for field in fieldz.fields(model_class):
+            # Use the actual class of the value instance, not the field type
+            actual_class = value.__class__
+            for field in fieldz.fields(actual_class):
                 field_name = field.name
                 field_value = get_with_default(value, field_name, field)
                 field_help = get_description(field)
@@ -519,6 +546,10 @@ def render_model_instance_field(
 def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: PLR0911
     """Get the appropriate renderer for a field based on its type and constraints."""
     annotation = field_info.get("type") or field_info.get("annotation")
+    if (ann := unpack_annotated(annotation)) != annotation:
+        annotation = ann
+        field_info["type"] = annotation
+
     json_schema_extra = field_info.get("json_schema_extra", {})
     if (
         json_schema_extra

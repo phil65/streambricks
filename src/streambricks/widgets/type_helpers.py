@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal, get_args, get_origin
+from typing import Annotated, Any, Literal, get_args, get_origin
 
 import fieldz
+
+
+def unpack_annotated(annotation: Any) -> Any:
+    """Unpack an Annotated type annotation to its base type."""
+    if get_origin(annotation) is Annotated and (args := get_args(annotation)):
+        return args[0]
+    return annotation
 
 
 def is_literal_type(annotation: Any) -> bool:
