@@ -313,6 +313,76 @@ def get_field(model_class, field_name: str) -> fieldz.Field:
     return field
 
 
+def get_union_type_options(annotation: Any) -> list[tuple[Any, str]]:
+    """Analyze a union type and extract individual types with their descriptions.
+
+    Args:
+        annotation: Type annotation to analyze
+
+    Returns:
+        List of tuples containing (resolved_type, type_description)
+    """
+    type_options = []
+
+    # Process each union member
+    for arg in get_args(annotation):
+        # Handle Annotated type that contains a union
+        if get_origin(arg) is Annotated:
+            annotated_args = get_args(arg)
+            if not annotated_args:
+                continue
+
+            # Get the inner type (first arg of Annotated)
+            inner_type = annotated_args[0]
+
+            # Handle pipe-syntax union (Python 3.10+)
+            if inner_type.__class__.__name__ == "UnionType":
+                # Extract each union member - use __args__ attribute for pipe unions
+                for union_member in inner_type.__args__:
+                    description = (
+                        union_member.__name__
+                        if hasattr(union_member, "__name__")
+                        else str(union_member)
+                    )
+                    type_options.append((union_member, description))
+            elif is_union_type(inner_type):
+                # Handle traditional Union types
+                for union_member in get_args(inner_type):
+                    description = (
+                        union_member.__name__
+                        if hasattr(union_member, "__name__")
+                        else str(union_member)
+                    )
+                    type_options.append((union_member, description))
+            else:
+                # Single type in Annotated
+                description = (
+                    inner_type.__name__
+                    if hasattr(inner_type, "__name__")
+                    else str(inner_type)
+                )
+                type_options.append((inner_type, description))
+
+        # Handle Literal types
+        elif is_literal_type(arg):
+            values = ", ".join(
+                f'"{v}"' if isinstance(v, str) else str(v) for v in get_args(arg)
+            )
+            description = f"Literal[{values}]"
+            type_options.append((arg, description))
+
+        # Handle None type
+        elif arg is type(None):
+            type_options.append((arg, "None"))
+
+        # Handle regular types
+        else:
+            description = arg.__name__ if hasattr(arg, "__name__") else str(arg)
+            type_options.append((arg, description))
+
+    return type_options
+
+
 if __name__ == "__main__":
     from pydantic import BaseModel
 
