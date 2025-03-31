@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Annotated, Any, Literal, get_args, get_origin
 
 import fieldz
+from fieldz._types import _MISSING_TYPE
 
 
 def unpack_annotated(annotation: Any) -> Any:
@@ -156,13 +157,11 @@ def create_default_instance(model_class: type) -> Any:
 
         # Check if the field already has a default value
         has_default = False
-        if hasattr(field, "default") and field.default != "MISSING":
-            # Use the field's default value
+        if field.default != _MISSING_TYPE.MISSING:
             default_values[field_name] = field.default
             has_default = True
-        elif hasattr(field, "default_factory") and field.default_factory != "MISSING":
+        elif field.default_factory != _MISSING_TYPE.MISSING:
             try:
-                # Use the field's default factory
                 default_values[field_name] = field.default_factory()  # pyright: ignore
                 has_default = True
             except Exception:  # noqa: BLE001
