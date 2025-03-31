@@ -33,6 +33,7 @@ from streambricks.widgets.type_helpers import (
     get_description,
     get_field,
     get_inner_type,
+    get_union_type_options,
     get_with_default,
     is_dataclass_like,
     is_literal_type,
@@ -79,24 +80,55 @@ def render_union_field(  # noqa: PLR0911
 ) -> Any:
     """Render a field that can accept multiple types."""
     annotation = field_info.get("type") or field_info.get("annotation")
-    possible_types = get_args(annotation)
+
+    type_options = get_union_type_options(annotation)  # list of (type, description)
+
+    default_index = 0
+    if value is not None:
+        for i, (t, _) in enumerate(type_options):
+            if (is_literal_type(t) and value in get_args(t)) or isinstance(value, t):
+                default_index = i
+                break
+
+    type_descriptions = [desc for _, desc in type_options]
     type_key = f"{key}_type"
-    type_names = [
-        t.__name__ if hasattr(t, "__name__") else str(t) for t in possible_types
-    ]
     selected_type_name = st.selectbox(
         f"Type for {label or key}",
-        options=type_names,
+        options=type_descriptions,
+        index=default_index,
         key=type_key,
         disabled=disabled,
         help=help,
     )
-
-    selected_type_index = type_names.index(selected_type_name)
-    selected_type = possible_types[selected_type_index]
+    selected_type_index = type_descriptions.index(selected_type_name)
+    selected_type, _ = type_options[selected_type_index]
     field_key = f"{key}_value"
+
+    # Special case for literal types
+    if is_literal_type(selected_type):
+        literal_values = get_args(selected_type)
+        value_index = 0
+        if value in literal_values:
+            value_index = literal_values.index(value)
+
+        return st.selectbox(
+            f"Value ({selected_type_name})",
+            options=literal_values,
+            index=value_index,
+            key=field_key,
+            disabled=disabled,
+            help=help,
+        )
+
+    # Special case for None type
+    if selected_type is type(None):
+        st.info("None selected")
+        return None
+
+    # For other types, use standard field renderer
     modified_field_info = field_info.copy()
     modified_field_info["type"] = selected_type
+
     typed_value: Any = None
     if value is not None:
         try:
@@ -134,7 +166,7 @@ def render_union_field(  # noqa: PLR0911
         if selected_type is bool and not isinstance(result, bool):
             return bool(result)
     except (ValueError, TypeError) as e:
-        error_msg = f"Cannot convert {result} to {selected_type.__name__}: {e!s}"
+        error_msg = f"Cannot convert {result} to {selected_type_name}: {e!s}"
         st.error(error_msg)
         if selected_type is int:
             return 0
@@ -461,7 +493,7 @@ def wrap_as_optional_field(renderer: WidgetFunc) -> WidgetFunc:
     return optional_wrapper
 
 
-def render_model_instance_field(
+def render_model_instance_field(  # noqa: PLR0911
     *,
     key: str,
     value: Any = None,
@@ -475,47 +507,52 @@ def render_model_instance_field(
     if model_class is None:
         error_msg = f"Model class not provided for field {key}"
         raise ValueError(error_msg)
-
-    # Handle Union types (including Python 3.10+ pipe syntax)
-    if is_union_type(model_class) or hasattr(model_class, "__or__"):
-        model_type_name = getattr(
-            model_class,
-            "__name__",
-            "Union[" + ", ".join(str(t) for t in get_args(model_class)) + "]",
-        )
-
-        # Initialize value if none
+    if is_union_type(model_class):
         if value is None:
-            # For Union types, try to create an instance of the first model type
+            # For Union types, try each possible model type
             possible_types = get_args(model_class)
             for possible_type in possible_types:
                 if is_dataclass_like(possible_type):
                     try:
-                        value = try_create_default_instance(possible_type)
-                        if value is not None:
-                            break
-                    except Exception:  # noqa: BLE001
+                        # Try to create a minimal valid instance
+                        value = create_default_instance(possible_type)
+                        break
+                    except Exception as e:  # noqa: BLE001
+                        st.warning(f"Could not create {possible_type.__name__}: {e}")
                         continue
 
             if value is None:
-                st.error(f"Could not create instance of any type in {model_type_name}")
+                for possible_type in possible_types:
+                    if not is_dataclass_like(possible_type):
+                        if possible_type is type(None):
+                            return None
+                        if is_literal_type(possible_type):
+                            return get_args(possible_type)[
+                                0
+                            ]  # Return first literal value
+
+                st.error(
+                    f"Could not create instance of any type in {model_class.__name__}"
+                )
                 return None
     # Initialize value if none for non-union types
     elif value is None:
-        value = try_create_default_instance(model_class)
-        if value is None:  # If creation failed
-            try:
-                value = model_class()
-            except Exception as e:  # noqa: BLE001
-                error_msg = f"Failed to create instance of {model_class.__name__}: {e!s}"
-                st.error(error_msg)
-                return None
+        try:
+            # Try to create a minimal valid instance
+            value = create_default_instance(model_class)
+        except Exception as e:  # noqa: BLE001
+            st.error(f"Failed to create {model_class.__name__}: {e}")
+            return None
 
     st.markdown(f"**{label or key}**")
     if help:
         st.caption(help)
 
     with st.expander("Edit", expanded=True):
+        if value is None:
+            st.error("Cannot render model: creation failed")
+            return None
+
         updated_value = {}
         try:
             # Use the actual class of the value instance, not the field type
@@ -701,7 +738,7 @@ def display_sequence_readonly(value, field_type, key=None):
 def display_model_readonly(value, key=None):
     """Display a nested model in read-only mode."""
     model_class = value.__class__
-    for field in fieldz.fields(model_class, parse_annotated=True):
+    for field in fieldz.fields(model_class):
         field_name = field.name
         field_value = getattr(value, field_name, None)
         if field_value == fieldz.Field.MISSING:
@@ -769,7 +806,7 @@ def render_model_form(
 
     result = {}
     field_groups: dict[str, Any] = {}
-    for field in fieldz.fields(model_class, parse_annotated=True):
+    for field in fieldz.fields(model_class):
         category = "General"
         if "category" in field.metadata:
             category = field.metadata["category"]
@@ -786,22 +823,20 @@ def render_model_form(
         for i, (_group_name, fields) in enumerate(field_groups.items()):
             with tabs[i]:
                 for field in fields:
-                    field_name = field.name
-                    if field_name in excluded_fields:
+                    if field.name in excluded_fields:
                         continue
-                    current_value = get_with_default(instance, field_name, field)
-                    result[field_name] = render_model_field(
-                        model_class, field_name, current_value
+                    current_value = get_with_default(instance, field.name, field)
+                    result[field.name] = render_model_field(
+                        model_class, field.name, current_value
                     )
     else:
         # Single category, render fields directly
-        for field in fieldz.fields(model_class):
-            field_name = field.name
-            if field_name in excluded_fields:
+        for field in fieldz.fields(model_class, parse_annotated=True):
+            if field.name in excluded_fields:
                 continue
-            current_value = get_with_default(instance, field_name, field)
-            result[field_name] = render_model_field(
-                model_class, field_name, current_value
+            current_value = get_with_default(instance, field.name, field)
+            result[field.name] = render_model_field(
+                model_class, field.name, current_value
             )
 
     return fieldz.replace(instance, **result)
