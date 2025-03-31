@@ -77,7 +77,7 @@ def get_with_default(obj: Any, field_name: str, field_info: Any = None) -> Any: 
     value = getattr(obj, field_name, None)
 
     # If value isn't MISSING, return it as is
-    if value != "MISSING":
+    if value != _MISSING_TYPE.MISSING:
         return value
 
     # If we don't have field info, get it
@@ -250,3 +250,95 @@ def get_inner_type(field_info: Any) -> Any:
         return get_args(annotation)[0]  # Get type of set items
     except (IndexError, TypeError):
         return Any
+
+
+def extract_atomic_types(annotation: Any) -> list[tuple[Any, str]]:
+    """Extract all atomic types from a complex type annotation.
+
+    Recursively unpacks nested unions, annotated types, etc. into a list of atomic types
+    with their human-readable descriptions.
+
+    Args:
+        annotation: The type annotation to unpack
+
+    Returns:
+        List of tuples (type, description) for all atomic types
+    """
+    result = []
+
+    # Handle None type
+    if annotation is type(None) or annotation is None:
+        return [(type(None), "None")]
+
+    # Unpack annotated first
+    if get_origin(annotation) is Annotated:
+        args = get_args(annotation)
+        if args:
+            return extract_atomic_types(args[0])
+
+    # Handle union types (including Optional)
+    if is_union_type(annotation):
+        for arg in get_args(annotation):
+            result.extend(extract_atomic_types(arg))
+        return result
+
+    # Handle literal types
+    if is_literal_type(annotation):
+        values_str = ", ".join(
+            f'"{v}"' if isinstance(v, str) else str(v) for v in get_args(annotation)
+        )
+        return [(annotation, f"Literal[{values_str}]")]
+
+    # Handle regular types
+    if hasattr(annotation, "__name__"):
+        return [(annotation, annotation.__name__)]
+    return [(annotation, str(annotation))]
+
+
+def is_str_type(annotation: Any) -> bool:
+    """Check if an annotation is a string type, including in unions."""
+    if annotation is str:
+        return True
+    if is_union_type(annotation):
+        return any(is_str_type(arg) for arg in get_args(annotation))
+    return False
+
+
+def is_int_type(annotation: Any) -> bool:
+    """Check if an annotation is an int type, including in unions."""
+    if annotation is int:
+        return True
+    if is_union_type(annotation):
+        return any(is_int_type(arg) for arg in get_args(annotation))
+    return False
+
+
+def is_float_type(annotation: Any) -> bool:
+    """Check if an annotation is a float type, including in unions."""
+    if annotation is float:
+        return True
+    if is_union_type(annotation):
+        return any(is_float_type(arg) for arg in get_args(annotation))
+    return False
+
+
+def is_bool_type(annotation: Any) -> bool:
+    """Check if an annotation is a bool type, including in unions."""
+    if annotation is bool:
+        return True
+    if is_union_type(annotation):
+        return any(is_bool_type(arg) for arg in get_args(annotation))
+    return False
+
+
+if __name__ == "__main__":
+    from pydantic import BaseModel
+
+    class SubModel(BaseModel):
+        """Test submodel."""
+
+        name: str
+        value: int | float
+        active: bool = True
+
+    print(create_default_instance(SubModel))

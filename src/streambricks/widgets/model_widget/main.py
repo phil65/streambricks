@@ -9,6 +9,7 @@ from enum import Enum
 from typing import Any, Literal, TypeVar, get_args, get_origin, overload
 
 import fieldz
+from fieldz._types import _MISSING_TYPE
 from pydantic import BaseModel, SecretStr
 import streamlit as st
 
@@ -703,7 +704,7 @@ def display_model_readonly(value, key=None):
     for field in fieldz.fields(model_class):
         field_name = field.name
         field_value = getattr(value, field_name, None)
-        if field_value == "MISSING":
+        if field_value == _MISSING_TYPE.MISSING:
             field_value = get_with_default(value, field_name, field)
         sub_key = f"{key}_{field_name}" if key else field_name
         cols = st.columns([0.3, 0.7])
