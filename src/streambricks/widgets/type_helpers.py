@@ -125,7 +125,7 @@ def is_sequence_type(annotation: Any) -> bool:
     return annotation in (list, tuple, Sequence)
 
 
-def get_with_default(obj: Any, field_name: str, field_info: Any = None) -> Any:  # noqa: PLR0911
+def get_with_default(obj: Any, field_name: str, field_info: fieldz.Field) -> Any:  # noqa: PLR0911
     """Get field value with appropriate default if it's missing."""
     # Get the raw value
     value = getattr(obj, field_name, None)
