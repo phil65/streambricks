@@ -25,11 +25,22 @@ def is_literal_type(annotation: Any) -> bool:
 
 
 def is_union_type(annotation: Any) -> bool:
-    """Check if a type annotation is a Union type."""
+    import typing
+
     origin = get_origin(annotation)
-    # Check if it's Union or Optional (which is Union[T, None])
-    return origin is not None and (
-        origin.__name__ == "Union" if hasattr(origin, "__name__") else False
+    # Direct identity check for typing.Union
+    if origin is typing.Union:
+        return True
+
+    # Check for Python 3.10+ pipe syntax union
+    if hasattr(annotation, "__class__") and annotation.__class__.__name__ == "UnionType":
+        return True
+
+    # For Python 3.10+ unions detected via get_origin
+    return bool(
+        origin is not None
+        and hasattr(origin, "__class__")
+        and origin.__class__.__name__ == "UnionType"
     )
 
 
