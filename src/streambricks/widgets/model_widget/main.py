@@ -812,11 +812,40 @@ def render_model_form(
 
 
 if __name__ == "__main__":
-    from typing import Literal
+    from typing import Annotated, Literal
 
     from pydantic import BaseModel, Field
 
     from streambricks.helpers import run
+
+    # Example models to simulate chunker configs
+    class LlamaIndexChunkerConfig(BaseModel):
+        """LlamaIndex chunker configuration."""
+
+        type: Literal["llamaindex"] = "llamaindex"
+        chunk_size: int = 1024
+        chunk_overlap: int = 20
+
+    class MarkdownChunkerConfig(BaseModel):
+        """Markdown chunker configuration."""
+
+        type: Literal["markdown"] = "markdown"
+        split_level: int = 1
+
+    class AiChunkerConfig(BaseModel):
+        """AI-based chunker configuration."""
+
+        type: Literal["ai"] = "ai"
+        max_chunk_size: int = 2000
+
+    # Create an Annotated union type similar to ChunkerConfig
+    ChunkerConfig = Annotated[
+        LlamaIndexChunkerConfig | MarkdownChunkerConfig | AiChunkerConfig,
+        Field(discriminator="type"),
+    ]
+
+    # Create a literal type similar to ChunkerShorthand
+    ChunkerShorthand = Literal["markdown", "llamaindex", "ai"]
 
     class SubModel(BaseModel):
         """Test submodel."""
@@ -826,28 +855,39 @@ if __name__ == "__main__":
         active: bool = True
 
     class TestModel(BaseModel):
-        """Test model."""
+        """Test model with complex union types."""
+
+        # This field simulates the problematic chunker field
+        chunker: ChunkerConfig | ChunkerShorthand | None = None
+        """Optional chunker configuration. If None, processes entire document at once."""
 
         status: int | str | bool = 2
         """A field that can be either int, str, or bool."""
+
         boolean: bool = True
         """Optional text field."""
+
         long_text: str | None = "test " * 40
         """Long text."""
 
         optional_int: int | None = None
         """An optional integer that can be None."""
+
         optional_string: str | None = None
         """An optional string that can be None."""
+
         optional_model: SubModel | None = None
         """An optional nested model that can be None."""
 
         tags: list[str] = Field(default_factory=list)
         """A list of string tags."""
+
         numbers: list[int | float] = Field(default_factory=list)
         """A list of numbers (int or float)"""
+
         settings: list[SubModel] = Field(default_factory=list)
         """A list of nested models"""
+
         priorities: list[Literal["Low", "Medium", "High"]] = Field(default_factory=list)
         """A list of priority levels."""
 
@@ -855,7 +895,9 @@ if __name__ == "__main__":
         st.title("Pydantic Form Demo")
         if "model" not in st.session_state:
             st.session_state.model = TestModel(status=2)
-        st.session_state.model = render_model_form(TestModel)
+
+        st.session_state.model = render_model_form(st.session_state.model)
+
         with st.expander("Current Model State", expanded=True):
             st.json(st.session_state.model.model_dump_json(indent=2))
 
