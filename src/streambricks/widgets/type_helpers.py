@@ -6,7 +6,61 @@ from collections.abc import Sequence
 from typing import Annotated, Any, Literal, get_args, get_origin
 
 import fieldz
-from fieldz._types import _MISSING_TYPE
+
+
+# For reference, these are the fieldz classes:
+#
+# @dataclasses.dataclass(**DC_KWARGS)
+# class Constraints:
+#     gt: int | float | None = None
+#     ge: int | float | None = None
+#     lt: int | float | None = None
+#     le: int | float | None = None
+#     multiple_of: int | float | None = None
+#     min_length: int | None = None  # for str
+#     max_length: int | None = None  # for str
+#     max_digits: int | None = None  # for decimal
+#     decimal_places: int | None = None  # for decimal
+#     pattern: str | None = None
+#     deprecated: bool | None = None
+#     tz: bool | None = None
+#     predicate: Callable[[Any], bool] | None = None
+#     # enum: list[Any] | None = None
+#     # const: Any | None = None
+#
+#     def __rich_repr__(self) -> Iterable[tuple[str, Any]]:
+#         for name, val in dataclasses.asdict(self).items():
+#             if val is not None:
+#                 yield name, val
+#
+#
+# @dataclasses.dataclass(**DC_KWARGS)
+# class Field(Generic[_T]):
+#     MISSING: ClassVar[Literal[_MISSING_TYPE.MISSING]] = _MISSING_TYPE.MISSING
+#
+#     name: str,
+#     type
+#     description: str | None = None
+#     title: str | None = None
+#     default: _T | Literal[_MISSING_TYPE.MISSING] = MISSING
+#     default_factory: Callable[[], _T] | Literal[_MISSING_TYPE.MISSING] = MISSING
+#     repr: bool = True
+#     hash: bool | None = None
+#     init: bool = True
+#     compare: bool = True
+#     metadata: Mapping[Any, Any] = dataclasses.field(default_factory=dict)
+#     kw_only: bool = False
+#     # extra
+#     frozen: bool = False
+#     native_field: Any | None = dataclasses.field(
+#         default=None, compare=False, repr=False
+#     )
+#     constraints: Constraints | None = None
+
+#     # populated during parse_annotated
+#     annotated_type: builtins.type[_T] | None = dataclasses.field(
+#         default=None, repr=False, compare=False
+#     )
 
 
 def unpack_annotated(annotation: Any) -> Any:
@@ -77,7 +131,7 @@ def get_with_default(obj: Any, field_name: str, field_info: Any = None) -> Any: 
     value = getattr(obj, field_name, None)
 
     # If value isn't MISSING, return it as is
-    if value != _MISSING_TYPE.MISSING:
+    if value != fieldz.Field.MISSING:
         return value
 
     # If we don't have field info, get it
@@ -157,10 +211,10 @@ def create_default_instance(model_class: type) -> Any:
 
         # Check if the field already has a default value
         has_default = False
-        if field.default != _MISSING_TYPE.MISSING:
+        if field.default != fieldz.Field.MISSING:
             default_values[field_name] = field.default
             has_default = True
-        elif field.default_factory != _MISSING_TYPE.MISSING:
+        elif field.default_factory != fieldz.Field.MISSING:
             try:
                 default_values[field_name] = field.default_factory()  # pyright: ignore
                 has_default = True
@@ -168,38 +222,35 @@ def create_default_instance(model_class: type) -> Any:
                 # If default_factory fails, fall back to type-based defaults
                 pass
 
-        # If the field doesn't have a default, create one based on type
         if not has_default:
-            field_type = field.type
-
-            # Handle union types
-            if is_union_type(field_type):
-                types = [t for t in get_args(field_type) if t is not type(None)]
-                if int in types:
-                    default_values[field_name] = 0
-                elif float in types:
-                    default_values[field_name] = 0.0
-                elif str in types:
-                    default_values[field_name] = ""
-                elif bool in types:
-                    default_values[field_name] = False
-                continue
-
-            # Set type-appropriate default values based on Python type
-            if isinstance(field_type, type):
-                if issubclass(field_type, str):
-                    default_values[field_name] = ""
-                elif issubclass(field_type, int):
-                    default_values[field_name] = 0
-                elif issubclass(field_type, float):
-                    default_values[field_name] = 0.0
-                elif issubclass(field_type, bool):
-                    default_values[field_name] = False
-                elif is_dataclass_like(field_type):
-                    # For nested models, recursively create default instances
-                    default_values[field_name] = create_default_instance(field_type)
+            default_values[field_name] = get_default_value(field.type)
 
     return model_class(**default_values)
+
+
+def get_default_value(field_type: Any):  # noqa: PLR0911
+    if is_union_type(field_type):
+        types = [t for t in get_args(field_type) if t is not type(None)]
+        if int in types:
+            return 0
+        if float in types:
+            return 0.0
+        if str in types:
+            return ""
+        if bool in types:
+            return False
+    if isinstance(field_type, type):
+        if issubclass(field_type, str):
+            return ""
+        if issubclass(field_type, int):
+            return 0
+        if issubclass(field_type, float):
+            return 0.0
+        if issubclass(field_type, bool):
+            return False
+        if is_dataclass_like(field_type):
+            return create_default_instance(field_type)
+    return None  #  or field_type()?
 
 
 def get_description(field: fieldz.Field) -> str | None:
@@ -213,7 +264,6 @@ def get_description(field: fieldz.Field) -> str | None:
 def add_new_item(items_list: list, item_type: Any) -> None:
     """Add a new item to a list based on its type."""
     if is_dataclass_like(item_type):
-        # For dataclass-like types, create a default instance
         new_item = create_default_instance(item_type)
         if new_item is not None:
             items_list.append(new_item)
@@ -252,83 +302,15 @@ def get_inner_type(field_info: Any) -> Any:
         return Any
 
 
-def extract_atomic_types(annotation: Any) -> list[tuple[Any, str]]:
-    """Extract all atomic types from a complex type annotation.
-
-    Recursively unpacks nested unions, annotated types, etc. into a list of atomic types
-    with their human-readable descriptions.
-
-    Args:
-        annotation: The type annotation to unpack
-
-    Returns:
-        List of tuples (type, description) for all atomic types
-    """
-    result = []
-
-    # Handle None type
-    if annotation is type(None) or annotation is None:
-        return [(type(None), "None")]
-
-    # Unpack annotated first
-    if get_origin(annotation) is Annotated:
-        args = get_args(annotation)
-        if args:
-            return extract_atomic_types(args[0])
-
-    # Handle union types (including Optional)
-    if is_union_type(annotation):
-        for arg in get_args(annotation):
-            result.extend(extract_atomic_types(arg))
-        return result
-
-    # Handle literal types
-    if is_literal_type(annotation):
-        values_str = ", ".join(
-            f'"{v}"' if isinstance(v, str) else str(v) for v in get_args(annotation)
-        )
-        return [(annotation, f"Literal[{values_str}]")]
-
-    # Handle regular types
-    if hasattr(annotation, "__name__"):
-        return [(annotation, annotation.__name__)]
-    return [(annotation, str(annotation))]
-
-
-def is_str_type(annotation: Any) -> bool:
-    """Check if an annotation is a string type, including in unions."""
-    if annotation is str:
-        return True
-    if is_union_type(annotation):
-        return any(is_str_type(arg) for arg in get_args(annotation))
-    return False
-
-
-def is_int_type(annotation: Any) -> bool:
-    """Check if an annotation is an int type, including in unions."""
-    if annotation is int:
-        return True
-    if is_union_type(annotation):
-        return any(is_int_type(arg) for arg in get_args(annotation))
-    return False
-
-
-def is_float_type(annotation: Any) -> bool:
-    """Check if an annotation is a float type, including in unions."""
-    if annotation is float:
-        return True
-    if is_union_type(annotation):
-        return any(is_float_type(arg) for arg in get_args(annotation))
-    return False
-
-
-def is_bool_type(annotation: Any) -> bool:
-    """Check if an annotation is a bool type, including in unions."""
-    if annotation is bool:
-        return True
-    if is_union_type(annotation):
-        return any(is_bool_type(arg) for arg in get_args(annotation))
-    return False
+def get_field(model_class, field_name: str) -> fieldz.Field:
+    field = next(
+        (f for f in fieldz.fields(model_class) if f.name == field_name),
+        None,
+    )
+    if field is None:
+        error_msg = f"Field {field_name} not found in {model_class.__name__}"
+        raise ValueError(error_msg)
+    return field
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ from enum import Enum
 from typing import Any, Literal, TypeVar, get_args, get_origin, overload
 
 import fieldz
-from fieldz._types import _MISSING_TYPE
 from pydantic import BaseModel, SecretStr
 import streamlit as st
 
@@ -32,6 +31,7 @@ from streambricks.widgets.type_helpers import (
     add_new_item,
     create_default_instance,
     get_description,
+    get_field,
     get_inner_type,
     get_with_default,
     is_dataclass_like,
@@ -520,7 +520,7 @@ def render_model_instance_field(
         try:
             # Use the actual class of the value instance, not the field type
             actual_class = value.__class__
-            for field in fieldz.fields(actual_class):
+            for field in fieldz.fields(actual_class, parse_annotated=True):
                 field_name = field.name
                 field_value = get_with_default(value, field_name, field)
                 field_help = get_description(field)
@@ -616,7 +616,7 @@ def render_model_readonly[T](
 
     with st.container():
         # Get all fields from the model
-        for field in fieldz.fields(model_class):
+        for field in fieldz.fields(model_class, parse_annotated=True):
             field_name = field.name
             if field_name in excluded_fields:
                 continue
@@ -701,10 +701,10 @@ def display_sequence_readonly(value, field_type, key=None):
 def display_model_readonly(value, key=None):
     """Display a nested model in read-only mode."""
     model_class = value.__class__
-    for field in fieldz.fields(model_class):
+    for field in fieldz.fields(model_class, parse_annotated=True):
         field_name = field.name
         field_value = getattr(value, field_name, None)
-        if field_value == _MISSING_TYPE.MISSING:
+        if field_value == fieldz.Field.MISSING:
             field_value = get_with_default(value, field_name, field)
         sub_key = f"{key}_{field_name}" if key else field_name
         cols = st.columns([0.3, 0.7])
@@ -716,10 +716,7 @@ def display_model_readonly(value, key=None):
 
 def render_model_field(model_class, field_name, value=None, container=st):
     """Render a field from a model using a compact layout."""
-    field = next((f for f in fieldz.fields(model_class) if f.name == field_name), None)
-    if field is None:
-        error_msg = f"Field {field_name} not found in {model_class.__name__}"
-        raise ValueError(error_msg)
+    field = get_field(model_class, field_name)
     field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field.native_field, "json_schema_extra"):
         dct = field.native_field.json_schema_extra or {}  # type: ignore
@@ -772,8 +769,7 @@ def render_model_form(
 
     result = {}
     field_groups: dict[str, Any] = {}
-    for field in fieldz.fields(model_class):
-        # Check if field has a category defined
+    for field in fieldz.fields(model_class, parse_annotated=True):
         category = "General"
         if "category" in field.metadata:
             category = field.metadata["category"]
@@ -814,7 +810,7 @@ def render_model_form(
 if __name__ == "__main__":
     from typing import Annotated, Literal
 
-    from pydantic import BaseModel, Field
+    import pydantic
 
     from streambricks.helpers import run
 
@@ -841,7 +837,7 @@ if __name__ == "__main__":
     # Create an Annotated union type similar to ChunkerConfig
     ChunkerConfig = Annotated[
         LlamaIndexChunkerConfig | MarkdownChunkerConfig | AiChunkerConfig,
-        Field(discriminator="type"),
+        pydantic.Field(discriminator="type"),
     ]
 
     # Create a literal type similar to ChunkerShorthand
@@ -879,16 +875,18 @@ if __name__ == "__main__":
         optional_model: SubModel | None = None
         """An optional nested model that can be None."""
 
-        tags: list[str] = Field(default_factory=list)
+        tags: list[str] = pydantic.Field(default_factory=list)
         """A list of string tags."""
 
-        numbers: list[int | float] = Field(default_factory=list)
+        numbers: list[int | float] = pydantic.Field(default_factory=list)
         """A list of numbers (int or float)"""
 
-        settings: list[SubModel] = Field(default_factory=list)
+        settings: list[SubModel] = pydantic.Field(default_factory=list)
         """A list of nested models"""
 
-        priorities: list[Literal["Low", "Medium", "High"]] = Field(default_factory=list)
+        priorities: list[Literal["Low", "Medium", "High"]] = pydantic.Field(
+            default_factory=list
+        )
         """A list of priority levels."""
 
     def demo():
