@@ -333,21 +333,21 @@ def get_union_type_options(annotation: Any) -> list[tuple[Any, str]]:
                 continue
 
             # Get the inner type (first arg of Annotated)
-            inner_type = annotated_args[0]
+            inner = annotated_args[0]
 
             # Handle pipe-syntax union (Python 3.10+)
-            if inner_type.__class__.__name__ == "UnionType":
+            if inner.__class__.__name__ == "UnionType":
                 # Extract each union member - use __args__ attribute for pipe unions
-                for union_member in inner_type.__args__:
+                for union_member in inner.__args__:
                     description = (
                         union_member.__name__
                         if hasattr(union_member, "__name__")
                         else str(union_member)
                     )
                     type_options.append((union_member, description))
-            elif is_union_type(inner_type):
+            elif is_union_type(inner):
                 # Handle traditional Union types
-                for union_member in get_args(inner_type):
+                for union_member in get_args(inner):
                     description = (
                         union_member.__name__
                         if hasattr(union_member, "__name__")
@@ -356,12 +356,8 @@ def get_union_type_options(annotation: Any) -> list[tuple[Any, str]]:
                     type_options.append((union_member, description))
             else:
                 # Single type in Annotated
-                description = (
-                    inner_type.__name__
-                    if hasattr(inner_type, "__name__")
-                    else str(inner_type)
-                )
-                type_options.append((inner_type, description))
+                description = inner.__name__ if hasattr(inner, "__name__") else str(inner)
+                type_options.append((inner, description))
 
         # Handle Literal types
         elif is_literal_type(arg):
