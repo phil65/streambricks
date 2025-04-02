@@ -69,7 +69,7 @@ PRIMITIVE_RENDERERS = {
 }
 
 
-def render_union_field(  # noqa: PLR0911
+def render_union_field(
     *,
     key: str,
     value: Any = None,
@@ -83,6 +83,94 @@ def render_union_field(  # noqa: PLR0911
 
     type_options = get_union_type_options(annotation)  # list of (type, description)
 
+    # Check if None is one of the options
+    none_type_index = None
+    for i, (t, _) in enumerate(type_options):
+        if t is type(None):
+            none_type_index = i
+            break
+
+    # Handle optional fields (union with None)
+    if none_type_index is not None:
+        # Remove None from type options
+        type_options.pop(none_type_index)
+
+        # Add checkbox to toggle between None and non-None
+        enable_key = f"{key}_not_none"
+
+        # Initialize the session state for this checkbox if it doesn't exist
+        if enable_key not in st.session_state:
+            st.session_state[enable_key] = value is not None
+
+        # Render checkbox using session state
+        is_enabled = st.checkbox(
+            f"Enable {label or key}",
+            key=enable_key,
+            disabled=disabled,
+            help=help,
+        )
+
+        if not is_enabled:
+            # If checkbox is unchecked, return None
+            st.text("None")
+            return None
+
+        # Continue with the regular union handling for non-None types
+        # If there's only one non-None type left, we can skip the type selector
+        if len(type_options) == 1:
+            selected_type, selected_type_name = type_options[0]
+            field_key = f"{key}_value"
+
+            # Special case for literal types
+            if is_literal_type(selected_type):
+                literal_values = get_args(selected_type)
+                value_index = 0
+                if value in literal_values:
+                    value_index = literal_values.index(value)
+
+                return st.selectbox(
+                    label or key,
+                    options=literal_values,
+                    index=value_index,
+                    key=field_key,
+                    disabled=disabled,
+                    help=None,  # Help already shown with checkbox
+                )
+
+            # For regular type, use standard field renderer
+            modified_field_info = field_info.copy()
+            modified_field_info["type"] = selected_type
+
+            typed_val: Any = None
+            if value is not None:
+                try:
+                    if selected_type is int and isinstance(value, int | float):
+                        typed_val = int(value)
+                    elif selected_type is float and isinstance(value, int | float):
+                        typed_val = float(value)
+                    elif selected_type is str:
+                        typed_val = str(value)
+                    elif selected_type is bool:
+                        typed_val = bool(value)
+                    elif isinstance(value, selected_type):
+                        typed_val = value
+                except (ValueError, TypeError):
+                    # If conversion fails, start with a blank/default value
+                    pass
+
+            renderer = get_field_renderer(modified_field_info)
+            result = renderer(
+                key=field_key,
+                value=typed_val,
+                label=label or key,
+                disabled=disabled,
+                help=None,  # Help already shown with checkbox
+                **modified_field_info,
+            )
+
+            return convert_result_type(result, selected_type)
+
+    # Original code for handling standard unions (no None or None already handled)
     default_index = 0
     if value is not None:
         for i, (t, _) in enumerate(type_options):
@@ -91,17 +179,23 @@ def render_union_field(  # noqa: PLR0911
                 break
 
     type_descriptions = [desc for _, desc in type_options]
-    type_key = f"{key}_type"
-    selected_type_name = st.selectbox(
-        f"Type for {label or key}",
-        options=type_descriptions,
-        index=default_index,
-        key=type_key,
-        disabled=disabled,
-        help=help,
-    )
-    selected_type_index = type_descriptions.index(selected_type_name)
-    selected_type, _ = type_options[selected_type_index]
+
+    # Skip type selector if there's only one option left
+    if len(type_options) == 1:
+        selected_type, selected_type_name = type_options[0]
+    else:
+        type_key = f"{key}_type"
+        selected_type_name = st.selectbox(
+            f"Type for {label or key}",
+            options=type_descriptions,
+            index=default_index,
+            key=type_key,
+            disabled=disabled,
+            help=help,
+        )
+        selected_type_index = type_descriptions.index(selected_type_name)
+        selected_type, selected_type_name = type_options[selected_type_index]
+
     field_key = f"{key}_value"
 
     # Special case for literal types
@@ -112,18 +206,13 @@ def render_union_field(  # noqa: PLR0911
             value_index = literal_values.index(value)
 
         return st.selectbox(
-            f"Value ({selected_type_name})",
+            f"Value ({selected_type_name if len(type_options) > 1 else label or key})",
             options=literal_values,
             index=value_index,
             key=field_key,
             disabled=disabled,
-            help=help,
+            help=help if len(type_options) == 1 else None,
         )
-
-    # Special case for None type
-    if selected_type is type(None):
-        st.info("None selected")
-        return None
 
     # For other types, use standard field renderer
     modified_field_info = field_info.copy()
@@ -150,31 +239,36 @@ def render_union_field(  # noqa: PLR0911
     result = renderer(
         key=field_key,
         value=typed_value,
-        label=f"Value ({selected_type_name})",
+        label=f"Value ({selected_type_name})" if len(type_options) > 1 else label or key,
         disabled=disabled,
-        help=help,
+        help=help if len(type_options) == 1 else None,
         **modified_field_info,
     )
 
+    return convert_result_type(result, selected_type)
+
+
+def convert_result_type(result: Any, target_type: Any) -> Any:  # noqa: PLR0911
+    """Convert result to the target type, with error handling."""
     try:
-        if selected_type is int and not isinstance(result, int):
+        if target_type is int and not isinstance(result, int):
             return int(result)
-        if selected_type is float and not isinstance(result, float):
+        if target_type is float and not isinstance(result, float):
             return float(result)
-        if selected_type is str and not isinstance(result, str):
+        if target_type is str and not isinstance(result, str):
             return str(result)
-        if selected_type is bool and not isinstance(result, bool):
+        if target_type is bool and not isinstance(result, bool):
             return bool(result)
     except (ValueError, TypeError) as e:
-        error_msg = f"Cannot convert {result} to {selected_type_name}: {e!s}"
+        error_msg = f"Cannot convert {result} to {target_type.__name__}: {e!s}"
         st.error(error_msg)
-        if selected_type is int:
+        if target_type is int:
             return 0
-        if selected_type is float:
+        if target_type is float:
             return 0.0
-        if selected_type is str:
+        if target_type is str:
             return ""
-        if selected_type is bool:
+        if target_type is bool:
             return False
         return None
     else:
@@ -898,7 +992,7 @@ if __name__ == "__main__":
         boolean: bool = True
         """Optional text field."""
 
-        long_text: str | None = "test " * 40
+        long_text: str = "test " * 40
         """Long text."""
 
         optional_int: int | None = None
