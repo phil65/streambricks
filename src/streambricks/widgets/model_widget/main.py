@@ -293,73 +293,27 @@ def render_sequence_field(
     disabled: bool = False,
     help: str | None = None,  # noqa: A002
     **field_info: Any,
-) -> list[Any]:
+) -> list[Any] | tuple[Any, ...]:
     """Render a field for sequence types (list, tuple, set)."""
-    add_item_key = f"{key}_add_item"
-    items_key = f"{key}_items"
-    if items_key not in st.session_state:
-        st.session_state[items_key] = list(value) if value is not None else []
+    from streambricks.widgets.sequence import sequence_widget
+
     item_type = get_inner_type(field_info)
-    st.markdown(f"**{label or key}**")
-    if help:
-        st.caption(help)
+    result = sequence_widget(
+        label=label or key,
+        item_type=item_type,
+        value=value,  # type: ignore
+        key=key,
+        disabled=disabled,
+        help=help,
+        **field_info,
+    )
 
-    with st.container():
-        if st.button("Add Item", key=add_item_key, disabled=disabled):
-            add_new_item(st.session_state[items_key], item_type)
-        render_sequence_items(
-            st.session_state[items_key],
-            item_type,
-            key,
-            items_key,
-            disabled,
-            field_info,
-        )
+    # Cast back to original sequence type if needed
+    annotation = field_info.get("type")
+    if annotation is tuple or (get_origin(annotation) is tuple):
+        return tuple(result)
 
-    return st.session_state[items_key]
-
-
-def render_sequence_items(
-    items: list,
-    item_type: Any,
-    key: str,
-    items_key: str,
-    disabled: bool,
-    field_info: dict,
-) -> None:
-    """Render items in a sequence with delete buttons."""
-    item_info = field_info.copy()
-    item_info["type"] = item_type
-    item_info["inside_expander"] = True
-
-    try:
-        renderer = get_field_renderer(item_info)
-        items_to_delete = []
-        for i, item in enumerate(items):
-            st.divider()
-            st.markdown(f"**Item {i + 1}**")
-
-            # Render the item
-            items[i] = renderer(
-                key=f"{key}_item_{i}",
-                value=item,
-                label=f"Item {i + 1}",
-                disabled=disabled,
-                **item_info,
-            )
-
-            delete_key = f"{key}_delete_{i}"
-            if st.button("Delete Item", key=delete_key, disabled=disabled):
-                items_to_delete.append(i)
-
-        if items_to_delete:
-            for idx in sorted(items_to_delete, reverse=True):
-                if 0 <= idx < len(items):
-                    items.pop(idx)
-            st.rerun()  # Force rerun after deletion
-
-    except Exception as e:  # noqa: BLE001
-        st.error(f"Error rendering sequence items: {e!s}")
+    return result
 
 
 def render_set_field(

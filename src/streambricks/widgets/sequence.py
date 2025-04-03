@@ -67,6 +67,7 @@ def sequence_widget[T](
                         **item_info,
                     )
                 with cols[1]:
+                    st.write("")
                     if st.button("🗑️", key=f"{widget_key}_delete_{i}", disabled=disabled):
                         items_to_delete.append(i)
 
