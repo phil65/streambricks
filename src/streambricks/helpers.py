@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import Enum
 import inspect
 import sys
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 import streamlit as st
 from streamlit import runtime
@@ -23,14 +23,7 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.column_types import ColumnConfig
 
 
-T = TypeVar("T")
-
-
-def run(
-    fn: Callable[..., T | Coroutine[Any, Any, T]] | Coroutine[Any, Any, T],
-    *args: Any,
-    **kwargs: Any,
-) -> None:
+def run(fn: Callable[..., Any] | Coroutine[Any, Any, Any], *args: Any, **kwargs: Any):
     """Run a function or coroutine with Streamlit.
 
     If Streamlit runtime exists, execute the function directly. Otherwise,
