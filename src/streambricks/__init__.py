@@ -24,6 +24,7 @@ from streambricks.widgets.model_selector import (
 from streambricks.helpers import run
 from streambricks.state import State
 from streambricks.widgets.bind_kwargs import bind_kwargs_as_widget
+from streambricks.sidebar import hide_sidebar, set_sidebar_width
 
 __all__ = [
     "GoogleUser",
@@ -33,6 +34,7 @@ __all__ = [
     "bind_kwargs_as_widget",
     "get_current_user",
     "google_login",
+    "hide_sidebar",
     "image_capture",
     "llm_model_selector",
     "microsoft_login",
@@ -42,4 +44,5 @@ __all__ = [
     "multiselect",
     "requires_login",
     "run",
+    "set_sidebar_width",
 ]
