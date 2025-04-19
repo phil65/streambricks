@@ -17,7 +17,8 @@ def _get_user_data() -> dict[str, Any] | None:
         return {**st.user}  # pyright: ignore
 
     # Fall back to experimental version
-    if hasattr(st, "experimental_user") and st.experimental_user.is_logged_in:
+    # if hasattr(st, "experimental_user") and getattr(st.experimental_user, "is_logged_in", False):  # noqa: E501
+    if st.experimental_user and st.experimental_user.get("is_logged_in"):
         return {**st.experimental_user}
 
     return None
@@ -41,7 +42,7 @@ def google_login(
     user_data = _get_user_data()
     if user_data is not None:
         # User is already logged in, return typed user object
-        return GoogleUser(is_logged_in=True, **user_data)  # pyright: ignore
+        return GoogleUser(**user_data)  # pyright: ignore
 
     # User not logged in, display login button
     if st.button(button_text, key=key):
@@ -69,7 +70,7 @@ def microsoft_login(
     user_data = _get_user_data()
     if user_data is not None:
         # User is already logged in, return typed user object
-        return MicrosoftUser(is_logged_in=True, **user_data)  # pyright: ignore
+        return MicrosoftUser(**user_data)  # pyright: ignore
 
     # User not logged in, display login button
     if st.button(button_text, key=key):
@@ -112,11 +113,11 @@ def get_current_user(
         return None
 
     if user_class is not None:
-        return user_class(is_logged_in=True, **user_data)  # pyright: ignore
+        return user_class(**user_data)  # pyright: ignore
     try:
-        return GoogleUser(is_logged_in=True, **user_data)  # pyright: ignore
+        return GoogleUser(**user_data)  # pyright: ignore
     except Exception:  # noqa: BLE001
         try:
-            return MicrosoftUser(is_logged_in=True, **user_data)  # pyright: ignore
+            return MicrosoftUser(**user_data)  # pyright: ignore
         except Exception:  # noqa: BLE001
             return None
