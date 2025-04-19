@@ -37,7 +37,9 @@ def _generate_avatar_image(
     # Try to load a font, fall back to default if not available
     font_size = int(size * 0.4)  # 40% of image size
     try:
-        font = ImageFont.truetype("arial.ttf", font_size)
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(
+            "arial.ttf", font_size
+        )
     except OSError:
         font = ImageFont.load_default()
 
