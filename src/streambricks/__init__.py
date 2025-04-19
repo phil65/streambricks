@@ -9,6 +9,7 @@ from streambricks.auth import (
     get_current_user,
     google_login,
     microsoft_login,
+    profile_widget,
     requires_login,
 )
 from streambricks.widgets.model_widget import (
@@ -42,6 +43,7 @@ __all__ = [
     "model_edit",
     "model_selector",
     "multiselect",
+    "profile_widget",
     "requires_login",
     "run",
     "set_sidebar_width",
