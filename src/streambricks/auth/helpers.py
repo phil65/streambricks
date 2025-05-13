@@ -15,12 +15,6 @@ def _get_user_data() -> dict[str, Any] | None:
     # Try stable version first
     if hasattr(st, "user") and getattr(st.user, "is_logged_in", False):  # pyright: ignore
         return {**st.user}  # pyright: ignore
-
-    # Fall back to experimental version
-    # if hasattr(st, "experimental_user") and getattr(st.experimental_user, "is_logged_in", False):  # noqa: E501
-    if st.experimental_user and st.experimental_user.get("is_logged_in"):
-        return {**st.experimental_user}
-
     return None
 
 
