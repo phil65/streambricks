@@ -39,6 +39,9 @@ dependencies = [
     "streamlit>=1.43.2",
 ]
 
+[project.optional-dependencies]
+auth = ["authlib"]
+
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
 
