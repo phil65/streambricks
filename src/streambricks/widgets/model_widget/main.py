@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Literal, TypeVar, get_args, get_origin, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin, overload
 
 import fieldz
 from pydantic import BaseModel, SecretStr
@@ -42,6 +42,10 @@ from streambricks.widgets.type_helpers import (
     is_union_type,
     unpack_annotated,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 T = TypeVar("T")
@@ -816,7 +820,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
 
 
 @overload
-def render_model_form(
+def render_model_form[TForm: BaseModel](
     model_or_instance: type[TForm],
     *,
     readonly: bool = False,
@@ -825,7 +829,7 @@ def render_model_form(
 
 
 @overload
-def render_model_form(
+def render_model_form[TForm: BaseModel](
     model_or_instance: TForm,
     *,
     readonly: bool = False,

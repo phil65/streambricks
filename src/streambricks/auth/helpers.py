@@ -75,14 +75,14 @@ def microsoft_login(
 
 
 @overload
-def get_current_user(user_class: type[T]) -> T: ...
+def get_current_user[T: (GoogleUser, MicrosoftUser)](user_class: type[T]) -> T: ...
 
 
 @overload
 def get_current_user() -> GoogleUser | MicrosoftUser | None: ...
 
 
-def get_current_user(
+def get_current_user[T: (GoogleUser, MicrosoftUser)](
     user_class: type[T] | None = None,
 ) -> T | GoogleUser | MicrosoftUser | None:
     """Get the currently logged in user as a typed object.

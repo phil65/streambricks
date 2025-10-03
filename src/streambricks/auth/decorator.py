@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import streamlit as st
 
@@ -10,11 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def requires_login(
+def requires_login[**P, T](
     func: Callable[P, T] | None = None,
     *,
     unauthorized_handler: str | Callable[[], Any] | None = None,

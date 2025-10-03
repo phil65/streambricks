@@ -4,12 +4,16 @@ import base64
 import functools
 import hashlib
 from io import BytesIO
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 
-from streambricks.auth.models import GoogleUser, MicrosoftUser
+from streambricks.auth.models import GoogleUser
+
+
+if TYPE_CHECKING:
+    from streambricks.auth.models import MicrosoftUser
 
 
 @st.cache_data(ttl=3600, show_spinner=False)

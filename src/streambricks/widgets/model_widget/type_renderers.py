@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import date, datetime, time
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 from pydantic import SecretStr
 import streamlit as st
+
+
+if TYPE_CHECKING:
+    from datetime import time
 
 
 def render_str_field(

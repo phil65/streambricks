@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from functools import wraps
 from inspect import Parameter, signature
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, create_model
 import streamlit as st
@@ -16,11 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def bind_kwargs_as_widget(
+def bind_kwargs_as_widget[**P, T](
     func: Callable[P, T],
     *,
     kwargs_to_bind: list[str],
