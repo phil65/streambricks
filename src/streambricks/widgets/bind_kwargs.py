@@ -109,13 +109,13 @@ def bind_kwargs_as_widget[**P, T](
                 field_kwargs["description"] = param_docs[name]
                 docstrings[name] = param_docs[name]
 
-            fields[name] = (param_type, Field(**field_kwargs))  # pyright: ignore
+            fields[name] = (param_type, Field(**field_kwargs))  # type: ignore
             if default != Parameter.empty:
                 defaults[name] = default
 
     # Create a Pydantic model dynamically
     model_name = f"{func.__name__}Config"
-    config_model = create_model(model_name, **fields)
+    config_model = create_model(model_name, **fields)  # type: ignore
 
     # Add docstrings as class variables
     for name, docstring in docstrings.items():
