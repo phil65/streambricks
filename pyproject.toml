@@ -1,6 +1,6 @@
 [project]
 name = "streambricks"
-version = "0.2.20"
+version = "0.3.0"
 description = "Streamlit widgets and helpers"
 readme = "README.md"
 requires-python = ">=3.12"
