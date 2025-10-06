@@ -1,7 +1,10 @@
 """StreamBricks components for Streamlit."""
 
-__version__ = "0.2.20"
+from __future__ import annotations
 
+from importlib.metadata import version
+
+__version__ = version("streambricks")
 
 from streambricks.auth import (
     GoogleUser,
@@ -28,6 +31,7 @@ from streambricks.widgets.bind_kwargs import bind_kwargs_as_widget
 from streambricks.sidebar import hide_sidebar, set_sidebar_width
 
 __all__ = [
+    "__version__",
     "GoogleUser",
     "MicrosoftUser",
     "MultiSelectItem",

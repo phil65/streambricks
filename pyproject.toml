@@ -1,5 +1,6 @@
 [project]
 name = "streambricks"
+version = "0.2.20"
 description = "Streamlit widgets and helpers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,7 +28,6 @@ dependencies = [
   # Only add below (Copier)
   "streamlit>=1.43.2",
 ]
-dynamic = ["version"]
 
 [project.urls]
 "Code coverage" = "https://app.codecov.io/gh/phil65/streambricks"
@@ -61,7 +61,7 @@ lint = [
 ]
 
 [build-system]
-requires = ["hatch-regex-commit", "hatchling"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.coverage.report]
@@ -72,11 +72,6 @@ exclude_lines = [
   "except ImportError",
   'if __name__ == "__main__":',
 ]
-
-[tool.hatch.version]
-source = "regex_commit"
-commit_extra_args = ["-e"]
-path = "src/streambricks/__init__.py"
 
 [tool.mknodes]
 allowed-commit-types = [
