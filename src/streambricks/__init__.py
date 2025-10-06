@@ -31,11 +31,11 @@ from streambricks.widgets.bind_kwargs import bind_kwargs_as_widget
 from streambricks.sidebar import hide_sidebar, set_sidebar_width
 
 __all__ = [
-    "__version__",
     "GoogleUser",
     "MicrosoftUser",
     "MultiSelectItem",
     "State",
+    "__version__",
     "bind_kwargs_as_widget",
     "get_current_user",
     "google_login",
