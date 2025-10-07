@@ -50,7 +50,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 WidgetFunc = Callable[..., T]
-TForm = TypeVar("TForm", bound=BaseModel)
 
 
 FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {
