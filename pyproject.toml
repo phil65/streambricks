@@ -3,7 +3,7 @@ name = "streambricks"
 version = "0.3.1"
 description = "Streamlit widgets and helpers"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 license = { file = "LICENSE" }
 authors = [
   { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
@@ -86,7 +86,7 @@ allowed-commit-types = [
 docstring-style = "google"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 disable_error_code = ["misc", "import"]
 pretty = true
 check_untyped_defs = true
@@ -96,7 +96,7 @@ plugins = []
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 pythonPlatform = "All"
 typeCheckingMode = "basic"
 deprecateTypingAliases = true
@@ -121,7 +121,7 @@ testpaths = "tests/"
 [tool.ruff]
 line-length = 90
 extend-exclude = ["docs"]
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 future-annotations = true
@@ -257,7 +257,7 @@ combine-as-imports = true
 preview = true
 
 [tool.ty.environment]
-python-version = "3.12"
+python-version = "3.13"
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
