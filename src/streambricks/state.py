@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from typing import Self, TypeVar
+from typing import Self
 
 from pydantic import BaseModel
 import streamlit as st
-
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class State(BaseModel):
