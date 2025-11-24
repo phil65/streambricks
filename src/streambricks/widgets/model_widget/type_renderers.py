@@ -30,9 +30,7 @@ def render_str_field(
     multiple_lines = field_info.get("multiple_lines", False)
     safe_value = "" if value is None else value
     has_meaningful_content = safe_value.strip() != ""
-    has_line_breaks = has_meaningful_content and (
-        "\n" in safe_value or "\r" in safe_value
-    )
+    has_line_breaks = has_meaningful_content and ("\n" in safe_value or "\r" in safe_value)
     is_long_val = len(safe_value) > 100  # noqa: PLR2004
     use_text_area = max_length > 100 or is_long_val or multiple_lines or has_line_breaks  # noqa: PLR2004
 

@@ -190,9 +190,7 @@ def profile_widget(
     <div class="profile-widget-{key if key else "default"}">
         <img src="{img_src}" class="avatar-{key if key else "default"}" alt="User Avatar">
         {
-        f'<span class="profile-name-{key if key else "default"}">{name}</span>'
-        if show_name
-        else ""
+        f'<span class="profile-name-{key if key else "default"}">{name}</span>' if show_name else ""
     }
     </div>
     """

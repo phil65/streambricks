@@ -52,9 +52,7 @@ T = TypeVar("T")
 WidgetFunc = Callable[..., T]
 
 
-FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {
-    "model_identifier": render_model_id_field
-}
+FIELD_METADATA_RENDERERS: dict[str, WidgetFunc[Any]] = {"model_identifier": render_model_id_field}
 
 
 PRIMITIVE_RENDERERS = {
@@ -406,9 +404,7 @@ def render_open_set_field(
             temp_list: list[Any] = []
             add_new_item(temp_list, item_type)
             # If the temp_list has an item and it's not a duplicate, add it to our items
-            if temp_list and str(temp_list[0]) not in {
-                str(i) for i in st.session_state[items_key]
-            }:
+            if temp_list and str(temp_list[0]) not in {str(i) for i in st.session_state[items_key]}:
                 st.session_state[items_key].append(temp_list[0])
             elif temp_list:  # Item was created but was a duplicate
                 st.warning("Item already exists in the set.")
@@ -578,13 +574,9 @@ def render_model_instance_field(  # noqa: PLR0911
                         if possible_type is type(None):
                             return None
                         if is_literal_type(possible_type):
-                            return get_args(possible_type)[
-                                0
-                            ]  # Return first literal value
+                            return get_args(possible_type)[0]  # Return first literal value
 
-                st.error(
-                    f"Could not create instance of any type in {model_class.__name__}"
-                )
+                st.error(f"Could not create instance of any type in {model_class.__name__}")
                 return None
     # Initialize value if none for non-union types
     elif value is None:
@@ -642,8 +634,7 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
     json_schema_extra = field_info.get("json_schema_extra", {})
     if (
         json_schema_extra
-        and (field_type := json_schema_extra.get("field_type"))
-        in FIELD_METADATA_RENDERERS
+        and (field_type := json_schema_extra.get("field_type")) in FIELD_METADATA_RENDERERS
     ):
         return FIELD_METADATA_RENDERERS[field_type]
     if annotation is SecretStr or (
@@ -877,18 +868,14 @@ def render_model_form(
                     if field.name in excluded_fields:
                         continue
                     current_value = get_with_default(instance, field.name, field)
-                    result[field.name] = render_model_field(
-                        model_class, field.name, current_value
-                    )
+                    result[field.name] = render_model_field(model_class, field.name, current_value)
     else:
         # Single category, render fields directly
         for field in fieldz.fields(model_class, parse_annotated=True):
             if field.name in excluded_fields:
                 continue
             current_value = get_with_default(instance, field.name, field)
-            result[field.name] = render_model_field(
-                model_class, field.name, current_value
-            )
+            result[field.name] = render_model_field(model_class, field.name, current_value)
 
     return fieldz.replace(instance, **result)
 
@@ -970,9 +957,7 @@ if __name__ == "__main__":
         settings: list[SubModel] = pydantic.Field(default_factory=list)
         """A list of nested models"""
 
-        priorities: list[Literal["Low", "Medium", "High"]] = pydantic.Field(
-            default_factory=list
-        )
+        priorities: list[Literal["Low", "Medium", "High"]] = pydantic.Field(default_factory=list)
         """A list of priority levels."""
 
     def demo():

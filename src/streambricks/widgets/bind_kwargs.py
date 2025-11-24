@@ -130,9 +130,7 @@ def bind_kwargs_as_widget[**P, T](
         if config_key not in st.session_state:
             # Initialize with defaults
             config_data = {
-                name: (defaults.get(name))
-                for name in kwargs_to_bind
-                if name in sig.parameters
+                name: (defaults.get(name)) for name in kwargs_to_bind if name in sig.parameters
             }
             # Override with any provided values in kwargs
             for name in kwargs_to_bind:

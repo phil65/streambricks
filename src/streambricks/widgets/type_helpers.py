@@ -73,10 +73,7 @@ def unpack_annotated(annotation: Any) -> Any:
 def is_literal_type(annotation: Any) -> bool:
     """Check if a type annotation is a Literal type."""
     # Check directly against the origin or special attribute
-    return (
-        get_origin(annotation) is Literal
-        or getattr(annotation, "__origin__", None) is Literal
-    )
+    return get_origin(annotation) is Literal or getattr(annotation, "__origin__", None) is Literal
 
 
 def is_union_type(annotation: Any) -> bool:
@@ -361,9 +358,7 @@ def get_union_type_options(annotation: Any) -> list[tuple[Any, str]]:
 
         # Handle Literal types
         elif is_literal_type(arg):
-            values = ", ".join(
-                f'"{v}"' if isinstance(v, str) else str(v) for v in get_args(arg)
-            )
+            values = ", ".join(f'"{v}"' if isinstance(v, str) else str(v) for v in get_args(arg))
             description = f"Literal[{values}]"
             type_options.append((arg, description))
 
