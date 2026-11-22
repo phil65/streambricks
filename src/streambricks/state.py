@@ -7,12 +7,13 @@ import streamlit as st
 
 
 class State(BaseModel):
+    """Pydantic model stored in `st.session_state`, persisting across reruns."""
+
     @classmethod
     def get(cls, *, key: str | None = None) -> Self:
         """Get or initialize typed state for Streamlit.
 
         Args:
-            model_class: Pydantic model class defining the state structure
             key: Optional key to use in session_state (defaults to model class name)
 
         Returns:

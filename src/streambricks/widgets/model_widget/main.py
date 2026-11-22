@@ -687,7 +687,13 @@ def render_model_readonly[T](
     instance: T | None = None,
     exclude: set[str] | None = None,
 ):
-    """Render a model in read-only mode using a clean label-based layout."""
+    """Render a model instance read-only, one labeled value per field.
+
+    Args:
+        model_class: Class of the model to display.
+        instance: Instance to display. Shows an info message if None.
+        exclude: Names of fields to leave out.
+    """
     excluded_fields = exclude or set()
     if instance is None:
         st.info("No data available")
@@ -833,7 +839,19 @@ def render_model_form(
     readonly: bool = False,
     exclude: set[str] | None = None,
 ) -> Any:
-    """Render a complete form for a model class or instance using compact layout."""
+    """Render a form for a model class or instance and return the edited instance.
+
+    Works with Pydantic models, dataclasses and other classes supported by fieldz.
+    Fields with a `category` in their metadata are grouped into tabs.
+
+    Args:
+        model_or_instance: Model class (a default instance is created) or instance.
+        readonly: Render the values read-only instead of as input widgets.
+        exclude: Names of fields to leave out.
+
+    Returns:
+        A new instance with the values entered in the form.
+    """
     excluded_fields = exclude or set()
     if isinstance(model_or_instance, type):
         model_class = model_or_instance
