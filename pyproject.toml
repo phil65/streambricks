@@ -2,7 +2,7 @@
 
 [project]
 name = "streambricks"
-version = "1.0.0"
+version = "1.1.0"
 description = "Streamlit widgets and helpers: auto-generated forms for Pydantic models, typed session state and login helpers"
 readme = "README.md"
 requires-python = ">=3.13"
