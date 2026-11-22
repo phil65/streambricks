@@ -114,7 +114,8 @@ def bind_kwargs_as_widget[**P, T](
                 defaults[name] = default
 
     # Create a Pydantic model dynamically
-    model_name = f"{func.__name__}Config"
+    func_name = getattr(func, "__name__", type(func).__name__)
+    model_name = f"{func_name}Config"
     config_model = create_model(model_name, **fields)  # type: ignore
 
     # Add docstrings as class variables
@@ -122,7 +123,7 @@ def bind_kwargs_as_widget[**P, T](
         setattr(config_model, f"__doc_{name}__", docstring)
 
     # Create a session state key for storing current config
-    config_key = f"{widget_prefix}_{func.__name__}_config"
+    config_key = f"{widget_prefix}_{func_name}_config"
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:

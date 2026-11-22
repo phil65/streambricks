@@ -9,7 +9,6 @@
 [![Implementation](https://img.shields.io/pypi/implementation/streambricks.svg)](https://pypi.org/project/streambricks/)
 [![Releases](https://img.shields.io/github/downloads/phil65/streambricks/total.svg)](https://github.com/phil65/streambricks/releases)
 [![Github Contributors](https://img.shields.io/github/contributors/phil65/streambricks)](https://github.com/phil65/streambricks/graphs/contributors)
-[![Github Discussions](https://img.shields.io/github/discussions/phil65/streambricks)](https://github.com/phil65/streambricks/discussions)
 [![Github Forks](https://img.shields.io/github/forks/phil65/streambricks)](https://github.com/phil65/streambricks/forks)
 [![Github Issues](https://img.shields.io/github/issues/phil65/streambricks)](https://github.com/phil65/streambricks/issues)
 [![Github Issues](https://img.shields.io/github/issues-pr/phil65/streambricks)](https://github.com/phil65/streambricks/pulls)

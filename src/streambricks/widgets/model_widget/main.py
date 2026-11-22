@@ -608,7 +608,7 @@ def render_model_instance_field(  # noqa: PLR0911
                 if field_help:
                     nested_field_info["help"] = field_help
                 if hasattr(field.native_field, "json_schema_extra"):
-                    nested_field_info.update(field.native_field.json_schema_extra or {})  # type: ignore
+                    nested_field_info.update(field.native_field.json_schema_extra or {})
                 renderer = get_field_renderer(nested_field_info)
                 updated_value[field_name] = renderer(
                     key=f"{key}_{field_name}",
@@ -670,7 +670,7 @@ def get_field_renderer(field_info: dict[str, Any]) -> WidgetFunc[Any]:  # noqa: 
         if isinstance(annotation, type):
             try:
                 if issubclass(annotation, base_type):  # type: ignore
-                    return renderer  # type: ignore
+                    return renderer
             except TypeError:
                 # Skip if we get a TypeError (for special typing constructs)
                 continue
@@ -798,7 +798,7 @@ def render_model_field(model_class, field_name, value=None, container=st):
     field = get_field(model_class, field_name)
     field_info = {"name": field.name, "type": field.type, "default": field.default}
     if hasattr(field.native_field, "json_schema_extra"):
-        dct = field.native_field.json_schema_extra or {}  # type: ignore
+        dct = field.native_field.json_schema_extra or {}
         field_info.update(dct)
         field_info["json_schema_extra"] = dct
     label = field_name.replace("_", " ").title()
