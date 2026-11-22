@@ -57,13 +57,14 @@ def _dataclass_form_app():
         label: str = "origin"
 
     st.session_state["result"] = sb.model_edit(Point(x=2))
-    sb.model_display(Point(x=7, label="shown"))
+    sb.model_display(Point, Point(x=7, label="shown"))
 
 
 def test_model_edit_supports_dataclasses():
     at = AppTest.from_function(_dataclass_form_app).run()
     assert not at.exception
     assert at.session_state["result"].x == 2  # noqa: PLR2004
+    assert "shown" in [t.value for t in at.text]
 
 
 def _multiselect_app():
