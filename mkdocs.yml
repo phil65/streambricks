@@ -1,5 +1,5 @@
 site_name: "StreamBricks"
-site_description: "Streamlit widgets and helpers"
+site_description: "Streamlit widgets and helpers: auto-generated forms for Pydantic models, typed session state and login helpers"
 repo_url: "https://github.com/phil65/streambricks/"
 site_url: https://phil65.github.io/streambricks/
 site_author: "Philipp Temminghoff"

@@ -9,7 +9,7 @@ copyright_holder: Philipp Temminghoff
 copyright_holder_email: philipptemminghoff@googlemail.com
 libraries_use_pydantic: false
 libraries_use_qt: false
-project_description: Streamlit widgets and helpers
+project_description: "Streamlit widgets and helpers: auto-generated forms for Pydantic models, typed session state and login helpers"
 project_name: StreamBricks
 python_minimum_version: '3.13'
 python_package_command_line_name: streambricks
