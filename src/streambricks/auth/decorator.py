@@ -55,7 +55,7 @@ def requires_login[**P, T](
     def decorator(fn: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            if hasattr(st, "user") and st.user.is_logged_in:
+            if hasattr(st, "user") and getattr(st.user, "is_logged_in", False):
                 return fn(*args, **kwargs)
 
             # Handle unauthorized access

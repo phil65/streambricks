@@ -116,3 +116,21 @@ def test_bind_kwargs_as_widget():
     at = AppTest.from_function(_bind_kwargs_app).run()
     assert not at.exception
     assert at.session_state["out"] == "Hello, World!"
+
+
+def _requires_login_app():
+    import streamlit as st
+
+    import streambricks as sb
+
+    @sb.requires_login(unauthorized_handler="Please log in first")
+    def page():
+        st.write("secret")
+
+    page()
+
+
+def test_requires_login_without_auth_configured():
+    at = AppTest.from_function(_requires_login_app).run()
+    assert not at.exception
+    assert [e.value for e in at.error] == ["Please log in first"]
