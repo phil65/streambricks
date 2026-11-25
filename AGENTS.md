@@ -59,7 +59,7 @@ uv run pytest                        # tests
 uvx ruff check . && uvx ruff format --check .
 uv run ty check                      # type check (src only, warnings fail CI)
 uv run deptry src                    # dependency check
-uv run mkdocs-mknodes build          # docs (site = README + generated API pages)
+uv run mknodes build                 # docs (site = README + generated API pages)
 uv run duty lint | lint-check | test | build | serve   # see duties.py
 ```
 
