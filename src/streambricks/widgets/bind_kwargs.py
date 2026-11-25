@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from functools import wraps
 from inspect import Parameter, signature
-from typing import TYPE_CHECKING, Any
+from types import NoneType, UnionType
+from typing import TYPE_CHECKING, Any, get_args, get_origin
 
 from pydantic import Field, create_model
 import streamlit as st
@@ -14,6 +15,15 @@ from streambricks.widgets.model_widget import render_model_form
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def unwrap_optional(tp: Any) -> Any:
+    """Return `X` for `X | None` / `Optional[X]`, otherwise `tp` unchanged."""
+    if get_origin(tp) is UnionType:  # typing.Union is types.UnionType since 3.14
+        args = [arg for arg in get_args(tp) if arg is not NoneType]
+        if len(args) == 1:
+            return args[0]
+    return tp
 
 
 def bind_kwargs_as_widget[**P, T](
@@ -94,12 +104,7 @@ def bind_kwargs_as_widget[**P, T](
             param_type = param.annotation if param.annotation != Parameter.empty else Any
             default = param.default if param.default != Parameter.empty else None
 
-            # Handle special case: Optional types
-            if param_type.__class__.__name__ == "_UnionGenericAlias":  # pyright: ignore
-                # For Union[X, None] types (Optional[X])
-                args = getattr(param_type, "__args__", ())
-                if len(args) == 2 and args[1] is type(None):  # noqa: PLR2004
-                    param_type = args[0]
+            param_type = unwrap_optional(param_type)
 
             # Create field with appropriate defaults and metadata
             field_kwargs = {"default": default}
