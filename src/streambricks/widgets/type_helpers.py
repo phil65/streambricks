@@ -295,7 +295,7 @@ def get_inner_type(field_info: Any) -> Any:
     annotation = field_info.get("type") or field_info.get("annotation")
     try:
         return get_args(annotation)[0]  # Get type of set items
-    except (IndexError, TypeError):
+    except IndexError, TypeError:
         return Any
 
 

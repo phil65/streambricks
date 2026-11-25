@@ -155,7 +155,7 @@ def render_union_field(
                         typed_val = bool(value)
                     elif isinstance(value, selected_type):
                         typed_val = value
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     # If conversion fails, start with a blank/default value
                     pass
 
@@ -232,7 +232,7 @@ def render_union_field(
                 typed_value = bool(value)
             elif isinstance(value, selected_type):
                 typed_value = value
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             # If conversion fails, start with a blank/default value
             pass
 
