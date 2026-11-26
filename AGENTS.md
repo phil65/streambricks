@@ -68,7 +68,7 @@ Most modules have an `if __name__ == "__main__":` demo; run with
 
 ## Conventions
 
-- Python >= 3.13, PEP 695 generics (`def f[T](...)`), `from __future__ import annotations`.
+- Python >= 3.14, PEP 695 generics (`def f[T](...)`), no `from __future__ import annotations` (PEP 649; banned via ruff TID251).
 - Ruff with many rules (line length 100, preview formatting), Google docstrings.
 - ty for type checking; use `# ty: ignore[rule]` only for real checker limitations
   (mypy-style `# type: ignore[code]` comments are reported as unused).
