@@ -82,6 +82,16 @@ def _matches_type(value: Any, tp: Any) -> bool:
     return False
 
 
+def _numeric_constraints(field: fieldz.Field) -> dict[str, Any]:
+    """Numeric bounds of a field (Pydantic `Field(ge=..., ...)`) for the number renderers."""
+    if field.constraints is None:
+        return {}
+    attrs = ("ge", "gt", "le", "lt", "multiple_of")
+    return {
+        attr: val for attr in attrs if (val := getattr(field.constraints, attr, None)) is not None
+    }
+
+
 def render_union_field(
     *,
     key: str,
@@ -619,7 +629,8 @@ def render_model_instance_field(  # noqa: PLR0911
                 field_name = field.name
                 field_value = get_with_default(value, field_name, field)
                 field_help = get_description(field)
-                nested_field_info = {"name": field_name, "type": field.type}
+                nested_field_info: dict[str, Any] = {"name": field_name, "type": field.type}
+                nested_field_info.update(_numeric_constraints(field))
                 if field_help:
                     nested_field_info["help"] = field_help
                 if hasattr(field.native_field, "json_schema_extra"):
@@ -817,7 +828,12 @@ def display_model_readonly(value, key=None):
 def render_model_field(model_class, field_name, value=None, container=st):
     """Render a field from a model using a compact layout."""
     field = get_field(model_class, field_name)
-    field_info = {"name": field.name, "type": field.type, "default": field.default}
+    field_info: dict[str, Any] = {
+        "name": field.name,
+        "type": field.type,
+        "default": field.default,
+    }
+    field_info.update(_numeric_constraints(field))
     if hasattr(field.native_field, "json_schema_extra"):
         dct = field.native_field.json_schema_extra or {}
         field_info.update(dct)
