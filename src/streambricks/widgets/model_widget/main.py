@@ -68,6 +68,20 @@ PRIMITIVE_RENDERERS = {
 }
 
 
+def _matches_type(value: Any, tp: Any) -> bool:
+    """Check whether `value` matches `tp`, supporting Literal and generic types."""
+    if is_literal_type(tp):
+        return any(value == arg and type(value) is type(arg) for arg in get_args(tp))
+    origin = get_origin(tp)
+    if origin is not None:
+        return isinstance(origin, type) and isinstance(value, origin)
+    if isinstance(tp, type):
+        if tp is int and isinstance(value, bool):
+            return False
+        return isinstance(value, tp)
+    return False
+
+
 def render_union_field(
     *,
     key: str,
@@ -151,7 +165,7 @@ def render_union_field(
                         typed_val = str(value)
                     elif selected_type is bool:
                         typed_val = bool(value)
-                    elif isinstance(value, selected_type):
+                    elif _matches_type(value, selected_type):
                         typed_val = value
                 except ValueError, TypeError:
                     # If conversion fails, start with a blank/default value
@@ -173,7 +187,7 @@ def render_union_field(
     default_index = 0
     if value is not None:
         for i, (t, _) in enumerate(type_options):
-            if (is_literal_type(t) and value in get_args(t)) or isinstance(value, t):
+            if _matches_type(value, t):
                 default_index = i
                 break
 
@@ -228,7 +242,7 @@ def render_union_field(
                 typed_value = str(value)
             elif selected_type is bool:
                 typed_value = bool(value)
-            elif isinstance(value, selected_type):
+            elif _matches_type(value, selected_type):
                 typed_value = value
         except ValueError, TypeError:
             # If conversion fails, start with a blank/default value

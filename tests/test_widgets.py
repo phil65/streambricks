@@ -184,3 +184,30 @@ def test_model_edit_datetime_field_renders_datetime():
     starts_at = at.session_state["result"].starts_at
     assert type(starts_at) is datetime
     assert starts_at == datetime(2025, 1, 2, 14, 30, 0)
+
+
+def _union_form_app():
+    from typing import Literal
+
+    from pydantic import BaseModel
+    import streamlit as st
+
+    import streambricks as sb
+
+    class UnionModel(BaseModel):
+        mode_or_id: Literal["fast", "safe"] | int = 5
+        tags_or_label: list[str] | str = "hello"
+        opt_tags: list[str] | None = ["a", "b"]
+        flag_or_count: int | bool = True
+
+    st.session_state["result"] = sb.model_edit(UnionModel)
+
+
+def test_model_edit_union_with_literal_and_generics():
+    at = AppTest.from_function(_union_form_app).run()
+    assert not at.exception
+    res = at.session_state["result"]
+    assert res.mode_or_id == 5  # noqa: PLR2004
+    assert res.tags_or_label == "hello"
+    assert res.opt_tags == ["a", "b"]
+    assert res.flag_or_count is True
