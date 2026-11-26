@@ -132,3 +132,29 @@ def test_requires_login_without_auth_configured():
     at = AppTest.from_function(_requires_login_app).run()
     assert not at.exception
     assert [e.value for e in at.error] == ["Please log in first"]
+
+
+def _readonly_collections_app():
+    from enum import Enum
+
+    from pydantic import BaseModel
+
+    import streambricks as sb
+
+    class Color(Enum):
+        RED = "red"
+        BLUE = "blue"
+
+    class Collections(BaseModel):
+        tags: list[str] = ["alpha", "beta"]
+        items: set[str] = {"one", "two"}
+        colors: set[Color] = {Color.RED}
+
+    sb.model_display(Collections, Collections())
+
+
+def test_model_display_renders_nonempty_sequence_and_set():
+    at = AppTest.from_function(_readonly_collections_app).run()
+    assert not at.exception
+    texts = {t.value for t in at.text}
+    assert {"alpha", "beta", "one", "two", "RED"}.issubset(texts)
