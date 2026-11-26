@@ -158,3 +158,29 @@ def test_model_display_renders_nonempty_sequence_and_set():
     assert not at.exception
     texts = {t.value for t in at.text}
     assert {"alpha", "beta", "one", "two", "RED"}.issubset(texts)
+
+
+def _datetime_form_app():
+    from datetime import datetime
+
+    from pydantic import BaseModel
+    import streamlit as st
+
+    import streambricks as sb
+
+    class Event(BaseModel):
+        starts_at: datetime = datetime(2025, 1, 2, 14, 30, 0)
+
+    st.session_state["result"] = sb.model_edit(Event)
+
+
+def test_model_edit_datetime_field_renders_datetime():
+    from datetime import datetime
+
+    at = AppTest.from_function(_datetime_form_app).run()
+    assert not at.exception
+    assert len(at.date_input) == 1
+    assert len(at.time_input) == 1
+    starts_at = at.session_state["result"].starts_at
+    assert type(starts_at) is datetime
+    assert starts_at == datetime(2025, 1, 2, 14, 30, 0)
