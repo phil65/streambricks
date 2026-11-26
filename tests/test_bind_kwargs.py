@@ -22,3 +22,19 @@ from streambricks.widgets.bind_kwargs import unwrap_optional
 )
 def test_unwrap_optional(tp: object, expected: object) -> None:
     assert unwrap_optional(tp) == expected
+
+
+def test_unbound_params_may_use_type_checking_only_names() -> None:
+    """Annotations of parameters that are not bound are never evaluated (PEP 649)."""
+    from typing import TYPE_CHECKING
+
+    from streambricks.widgets.bind_kwargs import bind_kwargs_as_widget
+
+    if TYPE_CHECKING:
+        from decimal import Decimal  # only imported for type checkers
+
+    def compute(value: Decimal, factor: int = 2) -> int:
+        return factor
+
+    wrapped = bind_kwargs_as_widget(compute, kwargs_to_bind=["factor"])
+    assert wrapped.__name__ == "compute"

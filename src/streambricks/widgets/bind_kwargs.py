@@ -1,5 +1,6 @@
 """Widget binder that exposes function kwargs as configurable widgets."""
 
+import annotationlib
 from functools import wraps
 from inspect import Parameter, signature
 from types import NoneType, UnionType
@@ -45,8 +46,9 @@ def bind_kwargs_as_widget[**P, T](
     Returns:
         A new function that wraps the original with widget-configurable kwargs
     """
-    # Get function signature
-    sig = signature(func)
+    # FORWARDREF: annotations of parameters that are not bound may name
+    # TYPE_CHECKING-only types
+    sig = signature(func, annotation_format=annotationlib.Format.FORWARDREF)
 
     # Create a dynamic model for the kwargs we want to expose
     fields = {}
