@@ -274,3 +274,19 @@ def test_model_edit_respects_numeric_constraints_including_zero():
     assert at.number_input[1].max == 0
     assert at.number_input[2].min == 0.0
     assert at.number_input[2].max == 1.0
+
+
+def test_default_instance_bool_field_is_false_not_zero():
+    from dataclasses import dataclass
+
+    from streambricks.widgets.type_helpers import create_default_instance, get_default_value
+
+    @dataclass
+    class Flags:
+        enabled: bool
+        count: int
+
+    instance = create_default_instance(Flags)
+    assert instance.enabled is False
+    assert instance.count == 0
+    assert get_default_value(bool) is False

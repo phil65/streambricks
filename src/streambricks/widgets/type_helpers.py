@@ -152,25 +152,25 @@ def get_with_default(obj: Any, field_name: str, field_info: fieldz.Field) -> Any
             if bool in types:
                 return False
             if types and isinstance(types[0], type):
+                if issubclass(types[0], bool):
+                    return False
                 if issubclass(types[0], int):
                     return 0
                 if issubclass(types[0], float):
                     return 0.0
                 if issubclass(types[0], str):
                     return ""
-                if issubclass(types[0], bool):
-                    return False
 
         # Handle basic types
         if isinstance(field_type, type):
+            if issubclass(field_type, bool):
+                return False
             if issubclass(field_type, int):
                 return 0
             if issubclass(field_type, float):
                 return 0.0
             if issubclass(field_type, str):
                 return ""
-            if issubclass(field_type, bool):
-                return False
             if (
                 issubclass(field_type, list)
                 or issubclass(field_type, set)
@@ -237,12 +237,12 @@ def get_default_value(field_type: Any):  # noqa: PLR0911
     if isinstance(field_type, type):
         if issubclass(field_type, str):
             return ""
+        if issubclass(field_type, bool):
+            return False
         if issubclass(field_type, int):
             return 0
         if issubclass(field_type, float):
             return 0.0
-        if issubclass(field_type, bool):
-            return False
         if is_dataclass_like(field_type):
             return create_default_instance(field_type)
     return None  #  or field_type()?
