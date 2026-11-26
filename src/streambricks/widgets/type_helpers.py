@@ -302,7 +302,7 @@ def get_inner_type(field_info: Any) -> Any:
 
 def get_field(model_class, field_name: str) -> fieldz.Field:
     field = next(
-        (f for f in fieldz.fields(model_class) if f.name == field_name),
+        (f for f in fieldz.fields(model_class, parse_annotated=True) if f.name == field_name),
         None,
     )
     if field is None:

@@ -250,3 +250,27 @@ def test_open_set_delete_removes_selected_item():
     assert not at.exception
     assert at.session_state["tags_items"] == initial_order[1:]
     assert at.session_state["res"] == set(initial_order[1:])
+
+
+def _numeric_constraints_app():
+    from pydantic import BaseModel, Field
+
+    import streambricks as sb
+
+    class Bounded(BaseModel):
+        retries: int = Field(default=3, ge=0, le=10)
+        negative: int = Field(default=-5, ge=-10, le=0)
+        ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    sb.model_edit(Bounded)
+
+
+def test_model_edit_respects_numeric_constraints_including_zero():
+    at = AppTest.from_function(_numeric_constraints_app).run()
+    assert not at.exception
+    assert at.number_input[0].min == 0
+    assert at.number_input[0].max == 10  # noqa: PLR2004
+    assert at.number_input[1].min == -10  # noqa: PLR2004
+    assert at.number_input[1].max == 0
+    assert at.number_input[2].min == 0.0
+    assert at.number_input[2].max == 1.0

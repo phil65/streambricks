@@ -60,14 +60,20 @@ def render_int_field(
     **field_info: Any,
 ) -> int:
     """Render an integer field using Streamlit number_input."""
-    # Set default value
-    safe_value = int(value) if value is not None else 0
-    min_value = field_info.get("ge") or field_info.get("gt")
-    min_value = int(min_value) if min_value is not None else None
-    max_value = field_info.get("le") or field_info.get("lt")
-    max_value = int(max_value) if max_value is not None else None
+    ge = field_info.get("ge")
+    gt = field_info.get("gt")
+    min_value = int(ge) if ge is not None else (int(gt) + 1 if gt is not None else None)
+    le = field_info.get("le")
+    lt = field_info.get("lt")
+    max_value = int(le) if le is not None else (int(lt) - 1 if lt is not None else None)
     step = field_info.get("multiple_of")
     step = int(step) if step is not None else 1
+    safe_value = int(value) if value is not None else 0
+    if value is None:
+        if min_value is not None and safe_value < min_value:
+            safe_value = min_value
+        if max_value is not None and safe_value > max_value:
+            safe_value = max_value
     result = st.number_input(
         label=label or key,
         value=safe_value,
@@ -95,13 +101,22 @@ def render_float_field(
     """Render a float or Decimal field using Streamlit number_input."""
     field_type = field_info.get("type")
     is_decimal = field_type is Decimal
-    safe_value = float(value) if value is not None else 0.0
-    min_value = field_info.get("ge") or field_info.get("gt")
-    min_value = float(min_value) if min_value is not None else None
-    max_value = field_info.get("le") or field_info.get("lt")
-    max_value = float(max_value) if max_value is not None else None
+    ge = field_info.get("ge")
+    gt = field_info.get("gt")
+    min_raw = ge if ge is not None else gt
+    min_value = float(min_raw) if min_raw is not None else None
+    le = field_info.get("le")
+    lt = field_info.get("lt")
+    max_raw = le if le is not None else lt
+    max_value = float(max_raw) if max_raw is not None else None
     step = field_info.get("multiple_of")
     step = float(step) if step is not None else 0.01
+    safe_value = float(value) if value is not None else 0.0
+    if value is None:
+        if min_value is not None and safe_value < min_value:
+            safe_value = min_value
+        if max_value is not None and safe_value > max_value:
+            safe_value = max_value
     result = st.number_input(
         label=label or key,
         value=safe_value,
