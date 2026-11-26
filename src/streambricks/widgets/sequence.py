@@ -73,6 +73,9 @@ def sequence_widget[T](
                 for idx in sorted(items_to_delete, reverse=True):
                     if 0 <= idx < len(st.session_state[items_key]):
                         st.session_state[items_key].pop(idx)
+                item_prefix = f"{widget_key}_item_"
+                for state_key in [k for k in st.session_state if str(k).startswith(item_prefix)]:
+                    del st.session_state[state_key]
                 st.rerun()
 
         except Exception as e:  # noqa: BLE001

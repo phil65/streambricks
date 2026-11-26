@@ -211,3 +211,42 @@ def test_model_edit_union_with_literal_and_generics():
     assert res.tags_or_label == "hello"
     assert res.opt_tags == ["a", "b"]
     assert res.flag_or_count is True
+
+
+def _sequence_delete_app():
+    import streamlit as st
+
+    from streambricks.widgets.sequence import sequence_widget
+
+    res = sequence_widget("Tags", str, value=["apple", "banana", "cherry"], key="tags")
+    st.session_state["res"] = list(res)
+
+
+def test_sequence_widget_delete_removes_selected_item():
+    at = AppTest.from_function(_sequence_delete_app).run()
+    assert not at.exception
+    assert at.session_state["res"] == ["apple", "banana", "cherry"]
+    # Button 0 is "Add Item"; button 1 is the delete button for item 0 ("apple")
+    at.button[1].click().run()
+    assert not at.exception
+    assert at.session_state["res"] == ["banana", "cherry"]
+
+
+def _open_set_delete_app():
+    import streamlit as st
+
+    from streambricks.widgets.model_widget.main import render_set_field
+
+    res = render_set_field(key="tags", value={"apple", "banana", "cherry"}, type=set[str])
+    st.session_state["res"] = set(res)
+
+
+def test_open_set_delete_removes_selected_item():
+    at = AppTest.from_function(_open_set_delete_app).run()
+    assert not at.exception
+    initial_order = list(at.session_state["tags_items"])
+    # Button 0 is "Add Item"; button 1 is the delete button for item 0
+    at.button[1].click().run()
+    assert not at.exception
+    assert at.session_state["tags_items"] == initial_order[1:]
+    assert at.session_state["res"] == set(initial_order[1:])
