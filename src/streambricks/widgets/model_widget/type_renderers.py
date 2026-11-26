@@ -1,7 +1,5 @@
 """Primitive type renderers for Pydantic form fields."""
 
-from __future__ import annotations
-
 import contextlib
 from datetime import date, datetime
 from decimal import Decimal

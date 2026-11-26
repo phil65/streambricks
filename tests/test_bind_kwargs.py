@@ -1,7 +1,5 @@
 """Tests for the Optional unwrapping used by bind_kwargs_as_widget."""
 
-from __future__ import annotations
-
 from typing import Optional, Union
 
 import pytest

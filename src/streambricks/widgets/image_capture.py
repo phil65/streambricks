@@ -1,7 +1,5 @@
 """Model selector component for streamlit applications."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import streamlit as st

@@ -1,7 +1,5 @@
 """Primitive type handlers for Pydantic form fields."""
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from typing import Annotated, Any, Literal, get_args, get_origin
 

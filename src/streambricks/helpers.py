@@ -1,7 +1,5 @@
 """Utility functions for Streamlit applications."""
 
-from __future__ import annotations
-
 import asyncio
 from datetime import date, datetime, time
 from decimal import Decimal

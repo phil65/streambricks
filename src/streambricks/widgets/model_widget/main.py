@@ -1,7 +1,5 @@
 """Primitive type handlers for Pydantic form fields."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import Decimal
